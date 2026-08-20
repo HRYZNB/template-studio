@@ -2164,13 +2164,49 @@ code {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.22);
   font-size: 9px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 .toast.error {
   background: #4a2422;
   color: #ffdeda;
   max-width: 520px;
+}
+.toast-content {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.toast-content strong {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+}
+.toast-content code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.13);
+  color: inherit;
+  font-size: 8px;
+}
+.toast-content span,
+.toast-content small {
+  color: rgba(255, 222, 218, 0.82);
+  line-height: 1.5;
+}
+.toast-content ul {
+  display: grid;
+  gap: 3px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.toast-content li {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  color: rgba(255, 222, 218, 0.9);
 }
 .toast button {
   border: 0;

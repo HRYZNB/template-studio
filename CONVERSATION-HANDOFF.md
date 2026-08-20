@@ -1,4 +1,4 @@
-# RuiWare 单体零部件模板工程平台：对话整理与开发交接
+﻿# RuiWare 单体零部件模板工程平台：对话整理与开发交接
 
 > 更新时间：2026-08-14  
 > 用途：新开 Codex 对话时，先阅读本文件，再阅读 `README.md`、`docs/ARCHITECTURE.md`、`docs/UNIFIED-METAMODEL.md` 和 `docs/GEOMETRY-STUDIO-USER-GUIDE.md`。  

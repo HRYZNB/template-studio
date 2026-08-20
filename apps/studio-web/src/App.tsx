@@ -44,7 +44,7 @@ import {
   Variable,
   X,
 } from "lucide-react";
-import { api } from "./api";
+import { ApiError, api } from "./api";
 import type {
   CompileResult,
   Draft,
@@ -147,6 +147,31 @@ const OPERATORS = [
   ["sheet.bend", "钣金单折弯", "available"],
   ["solid.import", "外部模型派生", "planned"],
 ] as const;
+
+type ErrorNotice = {
+  code: string;
+  message: string;
+  action?: string | null;
+  fields: { path?: string; message: string; type?: string }[];
+  traceId?: string;
+};
+
+const toErrorNotice = (error: unknown): ErrorNotice => {
+  if (error instanceof ApiError) {
+    return {
+      code: error.code,
+      message: error.message,
+      action: error.action,
+      fields: error.fields,
+      traceId: error.traceId,
+    };
+  }
+  if (error instanceof Error) {
+    return { code: "CLIENT_ERROR", message: error.message, fields: [] };
+  }
+  return { code: "CLIENT_ERROR", message: String(error), fields: [] };
+};
+
 const operatorStatus = (operator: string) =>
   OPERATORS.find(([id]) => id === operator)?.[2] || "unknown";
 const operatorDefaults = (operator: string): Pick<GeometryRecipe["operations"][number], "arguments" | "argumentExpressions" | "sourceRefs"> => {
@@ -2911,7 +2936,7 @@ export default function App() {
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState<ErrorNotice | null>(null);
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
@@ -2972,8 +2997,8 @@ export default function App() {
     }
   }
   function showError(e: unknown) {
-    setError(e instanceof Error ? e.message : String(e));
-    setTimeout(() => setError(""), 7000);
+    setError(toErrorNotice(e));
+    setTimeout(() => setError(null), 9000);
   }
   function change(next: Draft) {
     setDraft(next);
@@ -3406,10 +3431,31 @@ export default function App() {
       </main>
       {(notice || error) && (
         <div className={`toast ${error ? "error" : ""}`}>
-          {error || notice}
+          {error ? (
+            <div className="toast-content">
+              <strong>
+                <code>{error.code}</code>
+                {error.message}
+              </strong>
+              {error.action && <span>{error.action}</span>}
+              {error.fields.length > 0 && (
+                <ul>
+                  {error.fields.slice(0, 3).map((field, index) => (
+                    <li key={`${field.path || "field"}-${index}`}>
+                      {field.path && <code>{field.path}</code>}
+                      {field.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {error.traceId && <small>追踪号：{error.traceId}</small>}
+            </div>
+          ) : (
+            notice
+          )}
           <button
             onClick={() => {
-              setError("");
+              setError(null);
               setNotice("");
             }}
           >
