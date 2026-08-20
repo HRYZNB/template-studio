@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ruiware.local/contracts/material-binding.schema.json",
+  "title": "MaterialBinding",
+  "type": "object",
+  "required": ["id", "mode", "sourceLibrary", "sourceRecordId", "sourceChecksum"],
+  "properties": {
+    "id": {"type": "string"},
+    "mode": {"enum": ["reference", "copy"]},
+    "sourceLibrary": {"type": "string"},
+    "sourceRecordId": {"type": "string"},
+    "sourceUpdatedAt": {"type": ["string", "null"]},
+    "sourceChecksum": {"type": "string"},
+    "snapshot": {"type": "object"}
+  }
+}

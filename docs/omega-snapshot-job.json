@@ -1,0 +1,10 @@
+{
+  "input": "artifacts/1a50accb87ede0a2/model.step",
+  "mode": "view",
+  "outputs": [
+    { "path": "artifacts/review/omega-iso.png", "camera": "iso", "width": 1600, "height": 1200 },
+    { "path": "artifacts/review/omega-front.png", "camera": "front", "width": 1600, "height": 1200 },
+    { "path": "artifacts/review/omega-top.png", "camera": "top", "width": 1600, "height": 1200 }
+  ],
+  "render": { "viewLabels": true, "padding": 0.12, "sizeProfile": "diagnostic" }
+}

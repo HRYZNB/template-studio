@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "3.0",
+  "templateKind": "monolithicPart",
+  "code": "RW-GENERIC-PROFILE-001",
+  "name": "通用参数化截面示例",
+  "description": "使用统一二维草图、约束和材料区域生成零部件实例。",
+  "designIntent": "截面宽度、高度和长度可调，所有边界工况保持四边形拓扑。",
+  "manufacturingClassification": {
+    "originId": "inHouse",
+    "primaryProcessId": "extrusion",
+    "secondaryProcessIds": [],
+    "reviewed": true
+  },
+  "geometryPrototypeId": "prototype.customRecipe",
+  "blank": {
+    "form": "profileSegment",
+    "preparationMode": "sameAsSupply",
+    "preparationProcesses": ["none"],
+    "manufacturingRoute": "extrusion",
+    "lengthExpression": "length",
+    "widthExpression": "sectionWidth",
+    "thicknessExpression": "thickness"
+  },
+  "sketch": {
+    "model": "semanticProfile",
+    "acquisitionMethod": "manual",
+    "plane": "XY",
+    "profileMode": "closedRegion",
+    "drivingParameters": ["sectionWidth", "sectionHeight"],
+    "entities": [
+      {"id":"edge.bottom","role":"section.edge.bottom","geometryType":"line","parameterRefs":["sectionWidth"],"start":[-50,-25],"end":[50,-25]},
+      {"id":"edge.right","role":"section.edge.right","geometryType":"line","parameterRefs":["sectionHeight"],"start":[50,-25],"end":[50,25]},
+      {"id":"edge.top","role":"section.edge.top","geometryType":"line","parameterRefs":["sectionWidth"],"start":[50,25],"end":[-50,25]},
+      {"id":"edge.left","role":"section.edge.left","geometryType":"line","parameterRefs":["sectionHeight"],"start":[-50,25],"end":[-50,-25]}
+    ],
+    "constraints": [
+      {"id":"constraint.loop.closed","constraintType":"closed","entityRefs":["edge.bottom","edge.right","edge.top","edge.left"]},
+      {"id":"constraint.horizontal","constraintType":"horizontal","entityRefs":["edge.bottom","edge.top"]},
+      {"id":"constraint.vertical","constraintType":"vertical","entityRefs":["edge.left","edge.right"]},
+      {"id":"dimension.width","constraintType":"distanceX","entityRefs":["edge.bottom"],"parameterId":"sectionWidth"},
+      {"id":"dimension.height","constraintType":"distanceY","entityRefs":["edge.right"],"parameterId":"sectionHeight"},
+      {"id":"constraint.origin","constraintType":"fixed","entityRefs":["edge.bottom"]}
+    ],
+    "regions": [
+      {"id":"section.region.main","boundaryRefs":["edge.bottom","edge.right","edge.top","edge.left"],"closed":true,"role":"section.materialRegion","operation":"add"}
+    ],
+    "constraintsReviewed": true,
+    "conversionReviewed": false
+  },
+  "parameterDefinitions": [
+    {"id":"length","label":"长度","default":1000,"minimum":100,"maximum":6000,"sourceDefinition":{"type":"userInput"}},
+    {"id":"sectionWidth","label":"截面宽度","default":100,"minimum":10,"maximum":1000,"sourceDefinition":{"type":"userInput"}},
+    {"id":"sectionHeight","label":"截面高度","default":50,"minimum":10,"maximum":1000,"sourceDefinition":{"type":"userInput"}},
+    {"id":"thickness","label":"壁厚","default":2,"minimum":0.8,"maximum":8,"sourceDefinition":{"type":"userInput"}}
+  ],
+  "geometryRecipe": {
+    "constructionMode": "extrude",
+    "operations": [
+      {"id":"body.main","operator":"sketch.region_extrude","sourceRefs":["sketch.section.main"],"argumentExpressions":{"length":"length"},"semanticOutputs":["part.body"]}
+    ],
+    "reviewed": true
+  },
+  "featureRulesReviewed": true
+}

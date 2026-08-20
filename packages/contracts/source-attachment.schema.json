@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ruiware.local/contracts/source-attachment.schema.json",
+  "title": "SourceAttachment",
+  "type": "object",
+  "required": ["id", "filename", "mediaType", "kind", "size", "sha256", "url", "createdAt"],
+  "properties": {
+    "id": {"type": "string"},
+    "filename": {"type": "string", "minLength": 1, "maxLength": 180},
+    "mediaType": {"type": "string"},
+    "kind": {"enum": ["referenceImage", "drawing", "specification", "other"]},
+    "size": {"type": "integer", "minimum": 0, "maximum": 20971520},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "url": {"type": "string"},
+    "createdAt": {"type": "string", "format": "date-time"}
+  }
+}
+

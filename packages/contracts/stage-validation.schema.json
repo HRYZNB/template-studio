@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ruiware.local/contracts/stage-validation.schema.json",
+  "title": "StageValidation",
+  "type": "object",
+  "required": ["stage", "complete", "progress", "checks"],
+  "properties": {
+    "stage": {"const": "templateInfo"},
+    "complete": {"type": "boolean"},
+    "progress": {"type": "integer", "minimum": 0, "maximum": 100},
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "passed", "severity", "path", "message"],
+        "properties": {
+          "id": {"type": "string"},
+          "label": {"type": "string"},
+          "passed": {"type": "boolean"},
+          "severity": {"enum": ["error", "warning"]},
+          "path": {"type": "string"},
+          "message": {"type": "string"}
+        }
+      }
+    }
+  }
+}
+
