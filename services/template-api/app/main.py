@@ -1,3 +1,9 @@
+"""模板工程平台的 FastAPI 入口。
+
+这里把 HTTP 接口串起来：草稿生命周期、材料浏览、阶段校验、
+lowering、CAD Worker 调用、提案预览/应用和发布。
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -114,11 +120,13 @@ app.mount("/uploads", StaticFiles(directory=ATTACHMENT_ROOT), name="uploads")
 
 
 @app.get("/api/v1/registries/template-authoring")
+# 返回前端下拉框和分类选择需要的创作注册表。
 def template_authoring_registry():
     return TEMPLATE_AUTHORING_REGISTRY
 
 
 @app.post("/api/v1/sketches/solve")
+# 对前端传入的草图进行参数化求解；只返回结果，不保存草稿。
 def solve_sketch(request: SketchSolveRequest):
     return solve_semantic_sketch(request.draft, request.overrides)
 
@@ -134,6 +142,7 @@ def _next_template_code() -> str:
     return f"RW-TPL-{index:04d}"
 
 
+# 保存草稿的统一入口，集中处理修订冲突和编码重复错误。
 def _save(draft: TemplateDraft, *, reason: str) -> TemplateDraft:
     try:
         return repository.save_draft(draft, expected_revision=draft.revision if draft.id else None, reason=reason)
@@ -143,6 +152,7 @@ def _save(draft: TemplateDraft, *, reason: str) -> TemplateDraft:
         raise api_error("DRAFT_CODE_DUPLICATE", status_code=409, context={"code": str(error)}) from error
 
 
+# 读取当前可编辑草稿；不存在时转换成统一 API 错误。
 def _draft(draft_id: str) -> TemplateDraft:
     try:
         return repository.get_draft(draft_id)
@@ -150,6 +160,7 @@ def _draft(draft_id: str) -> TemplateDraft:
         raise api_error("DRAFT_NOT_FOUND", status_code=404, context={"draftId": draft_id}) from error
 
 
+# 解析草稿中所有材料验证样例，供阶段校验和编译选择材料快照。
 def _material_sample_contexts(draft: TemplateDraft) -> list[dict]:
     requirement = draft.materialRequirements[0] if draft.materialRequirements else None
     contexts: list[dict] = []
@@ -162,6 +173,7 @@ def _material_sample_contexts(draft: TemplateDraft) -> list[dict]:
     return contexts
 
 
+# 获取标称材料样例；CAD 编译默认用它作为权威材料输入。
 def _nominal_material_context(draft: TemplateDraft) -> dict | None:
     contexts = _material_sample_contexts(draft)
     by_id = {item["sampleId"]: item for item in contexts}
@@ -171,6 +183,7 @@ def _nominal_material_context(draft: TemplateDraft) -> dict | None:
     return by_id.get(selected.id) if selected else None
 
 
+# 汇总阶段校验所需上下文：材料样例、最近编译结果和期望输入哈希。
 def _stage_context(draft: TemplateDraft) -> tuple[list[dict], CompileResult | None, str | None]:
     material_samples = _material_sample_contexts(draft)
     expected_hash = None
@@ -181,6 +194,7 @@ def _stage_context(draft: TemplateDraft) -> tuple[list[dict], CompileResult | No
     return material_samples, latest, expected_hash
 
 
+# 调用领域层阶段校验，并注入 API 层才能知道的唯一性和编译上下文。
 def _validate(stage: StageName, draft: TemplateDraft) -> StageValidation:
     material_samples, latest, expected_hash = _stage_context(draft)
     return validate_stage(
@@ -210,6 +224,7 @@ def material_sources() -> list[dict[str, object]]:
 
 
 @app.get("/api/v1/materials")
+# 从只读材料库搜索材料；如果传入 draft_id，会附加是否满足当前需求的匹配结果。
 def materials(search: str = Query(default="", max_length=80), limit: int = 100, draft_id: str | None = None):
     try:
         rows = material_library.list(search=search, limit=limit)
@@ -257,6 +272,7 @@ def resolve_material_binding(binding_id: str):
 
 
 @app.post("/api/v1/template-drafts/blank", response_model=TemplateDraft, status_code=201)
+# 创建带默认元模型结构的空白模板草稿。
 def create_blank_template_draft(request: NewDraftRequest):
     draft = TemplateDraft(
         code=_next_template_code(), name=request.name.strip() or "未命名零部件模板",
@@ -282,6 +298,7 @@ def get_template_draft(draft_id: str):
 
 
 @app.put("/api/v1/template-drafts/{draft_id}", response_model=TemplateDraft)
+# 保存前端编辑后的草稿，并把标称求解坐标同步回草图种子。
 def update_template_draft(draft_id: str, draft: TemplateDraft):
     if draft.id not in (None, draft_id):
         raise api_error("DRAFT_ID_MISMATCH", status_code=409, context={"pathId": draft_id, "draftId": draft.id})
@@ -340,6 +357,7 @@ def validate_template_stage(draft_id: str, stage: StageName):
 
 
 @app.post("/api/v1/template-drafts/{draft_id}/stages/{stage}/complete", response_model=StageActionResult)
+# 完成某个阶段：先检查前置阶段，再通过阶段校验后写入阶段状态。
 def complete_template_stage(draft_id: str, stage: StageName):
     draft = _draft(draft_id)
     index = STAGE_ORDER.index(stage)
@@ -362,6 +380,7 @@ class AttachmentUpdateRequest(BaseModel):
 
 
 @app.post("/api/v1/template-drafts/{draft_id}/attachments", response_model=TemplateDraft)
+# 上传设计证据附件，按文件内容哈希去重后挂到草稿修订上。
 async def upload_template_attachment(
     draft_id: str, request: Request,
     filename: str = Query(min_length=1, max_length=180),
@@ -421,6 +440,7 @@ def remove_template_attachment(draft_id: str, attachment_id: str):
     return _save(draft.model_copy(update={"attachments": attachments}), reason="remove-attachment")
 
 
+# 生成 .rwpart 源包，把草稿、规则、草图、附件和最近编译产物打包。
 def _write_source_package(draft: TemplateDraft) -> Path:
     package_directory = ARTIFACT_ROOT / "packages"
     package_directory.mkdir(parents=True, exist_ok=True)
@@ -459,6 +479,7 @@ def download_source_package(draft_id: str):
     return FileResponse(target, media_type="application/octet-stream", filename=target.name)
 
 
+# 通过独立子进程执行 CAD Worker，避免 OpenCascade 状态污染 API 主进程。
 def _run_worker(plan) -> CompileResult:
     work_directory = ARTIFACT_ROOT / "_jobs" / f"job-{uuid.uuid4().hex[:12]}"
     work_directory.mkdir(parents=True, exist_ok=True)
@@ -483,6 +504,7 @@ def _run_worker(plan) -> CompileResult:
 
 
 @app.post("/api/v1/template-drafts/{draft_id}/compile", response_model=CompileResult)
+# 对已完成前置阶段的草稿执行 lowering 和真实 CAD 编译。
 def compile_template_draft(draft_id: str):
     draft = _draft(draft_id)
     required = STAGE_ORDER[:5]
@@ -498,6 +520,7 @@ def compile_template_draft(draft_id: str):
 
 
 @app.post("/api/v1/template-drafts/{draft_id}/evaluate", response_model=TemplateEvaluation)
+# 用用户覆盖值做一次模板试算，预览参数、特征和接口解析结果。
 def evaluate_template_draft(draft_id: str, request: EvaluationRequest):
     draft = _draft(draft_id)
     context = {
@@ -528,6 +551,7 @@ def list_published_versions(draft_id: str):
     return repository.list_versions(draft_id)
 
 
+# 根据结构化提案生成候选草稿，供预览和应用流程复用。
 def _proposal_candidate(draft: TemplateDraft, request: ProposalPreviewRequest) -> tuple[TemplateDraft, list[Any]]:
     try:
         return apply_proposal(draft, request.proposal, request.selectedCommandIds)
@@ -594,6 +618,7 @@ def _sync_sketch_seed_coordinates(
 
 
 @app.post("/api/v1/template-drafts/{draft_id}/proposals/preview")
+# 预览提案效果：返回候选草稿、diff、草图求解和阶段校验，不保存。
 def preview_proposal(draft_id: str, request: ProposalPreviewRequest):
     draft = _draft(draft_id)
     candidate, commands = _proposal_candidate(draft, request)
@@ -611,6 +636,7 @@ def preview_proposal(draft_id: str, request: ProposalPreviewRequest):
 
 
 @app.post("/api/v1/template-drafts/{draft_id}/proposals/apply", response_model=TemplateDraft)
+# 应用用户确认的提案命令，并把提案审计信息写入新修订。
 def apply_template_proposal(draft_id: str, request: ProposalApplyRequest):
     draft = _draft(draft_id)
     candidate, commands = _proposal_candidate(draft, request)
@@ -644,6 +670,7 @@ def apply_template_proposal(draft_id: str, request: ProposalApplyRequest):
 
 
 @app.post("/api/v1/template-drafts/{draft_id}/publish", response_model=PublishResult)
+# 发布模板：检查准入、冻结修订、生成源包，并写入不可变版本记录。
 def publish_template(draft_id: str):
     draft = _draft(draft_id)
     if draft.lifecycleStatus == "published" and draft.stageStatus.admission == "complete":

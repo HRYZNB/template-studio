@@ -1,3 +1,9 @@
+"""统一 API 错误码、错误响应结构和 FastAPI 异常处理。
+
+后端所有显式业务错误和请求校验错误都通过这里包装成稳定格式，
+方便前端统一展示“错误码、说明、建议动作、字段错误和追踪号”。
+"""
+
 from __future__ import annotations
 
 import uuid
@@ -67,6 +73,7 @@ class ApiError(HTTPException):
         super().__init__(status_code=status_code, detail=detail)
 
 
+# 创建一个带稳定错误码的业务异常，供路由函数直接抛出。
 def api_error(
     code: str,
     *,
@@ -86,10 +93,12 @@ def api_error(
     )
 
 
+# 生成短追踪号，便于用户截图后定位一次具体失败。
 def _trace_id() -> str:
     return uuid.uuid4().hex[:12]
 
 
+# 兼容新旧错误格式，把 HTTPException.detail 统一整理成 ApiErrorPayload。
 def _payload_from_detail(detail: Any) -> tuple[ApiErrorPayload, dict[str, Any]]:
     trace_id = _trace_id()
     if isinstance(detail, dict) and "code" in detail:
@@ -117,6 +126,7 @@ def _payload_from_detail(detail: Any) -> tuple[ApiErrorPayload, dict[str, Any]]:
     )
 
 
+# FastAPI 的 HTTPException 统一出口，保证所有 API 错误都有同一响应结构。
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     payload, context = _payload_from_detail(exc.detail)
     return JSONResponse(
@@ -130,6 +140,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     )
 
 
+# 请求体或查询参数不合法时，把 Pydantic 校验错误整理成字段级提示。
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     fields = [
         {

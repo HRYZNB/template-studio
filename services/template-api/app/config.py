@@ -1,3 +1,9 @@
+"""模板 API 的全局路径与存储配置。
+
+这里集中定义平台根目录、运行数据库、附件目录、CAD 工件目录，
+以及只读 RuiWare 材料库的位置，避免路径散落在业务代码里。
+"""
+
 from __future__ import annotations
 
 import os

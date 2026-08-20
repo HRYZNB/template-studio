@@ -1,3 +1,5 @@
+"""Regression tests for the unified API error envelope."""
+
 from fastapi.testclient import TestClient
 
 import app.main as main

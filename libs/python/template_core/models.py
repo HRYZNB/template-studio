@@ -1,3 +1,9 @@
+"""模板工程平台的核心运行时数据模型。
+
+这些模型是前端、API、草图求解器、lowering、CAD Worker 和发布流程
+之间共享的数据契约，理解项目时建议先从 TemplateDraft 看起。
+"""
+
 from __future__ import annotations
 
 from typing import Any, Literal
@@ -180,6 +186,7 @@ class AdmissionDefinition(BaseModel):
     releaseChannel: Literal["development", "pilot", "production"] = "development"
 
 
+# 新建草稿时使用的默认参数集合，保证几何、材料和规则有基础输入。
 def default_parameter_definitions() -> list[ParameterDefinition]:
     return [
         ParameterDefinition(id="length", label="长度", default=1000, minimum=100, maximum=6000, sourceDefinition={"type": "userInput"}),
@@ -189,10 +196,12 @@ def default_parameter_definitions() -> list[ParameterDefinition]:
     ]
 
 
+# 新建草稿时使用的默认材料要求。
 def default_material_requirement() -> MaterialRequirement:
     return MaterialRequirement()
 
 
+# 新建草稿时使用的默认几何配方，默认从语义草图拉伸实体。
 def default_geometry_recipe() -> GeometryRecipe:
     return GeometryRecipe(
         constructionMode="extrude",
@@ -219,6 +228,12 @@ def default_geometry_recipe() -> GeometryRecipe:
 
 
 class TemplateDraft(BaseModel):
+    """平台最核心的草稿对象。
+
+    一个 TemplateDraft 包含模板身份、材料、草图、参数、规则、接口、
+    阶段状态和发布信息，是整个工程链路流转的主数据。
+    """
+
     model_config = ConfigDict(extra="forbid")
     schemaVersion: Literal["3.0"] = "3.0"
     templateKind: Literal["monolithicPart"] = "monolithicPart"

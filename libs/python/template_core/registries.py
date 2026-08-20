@@ -1,3 +1,5 @@
+"""模板创建阶段使用的注册表定义，用来约束分类、工艺和几何原型选择。"""
+
 from __future__ import annotations
 
 from typing import Literal

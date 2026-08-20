@@ -1,3 +1,9 @@
+"""只读 RuiWare 材料库访问和材料匹配工具。
+
+这里负责归一化材料字段、计算材料指纹，并判断某个材料是否满足
+模板声明的材料要求。
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -32,6 +38,7 @@ SUPPLY_FORM_LABELS = {
 }
 
 
+# 计算厚度约束的有效范围，供材料阶段展示和边界样例校验使用。
 def effective_thickness_domain(requirement: MaterialRequirement) -> dict[str, Any]:
     """Return the single thickness domain used by filtering, parameters and admission."""
     constraint = requirement.thickness
@@ -54,6 +61,7 @@ def effective_thickness_domain(requirement: MaterialRequirement) -> dict[str, An
     }
 
 
+# 从材料库业务字段推断供应形态，例如 coil、sheet、profile 等。
 def infer_supply_forms(material: dict[str, Any]) -> list[str]:
     """Map RuiWare's business material types into the template contract's supply forms."""
     explicit = material.get("supplyForms")
@@ -63,6 +71,7 @@ def infer_supply_forms(material: dict[str, Any]) -> list[str]:
     return [form for form, aliases in SUPPLY_FORM_ALIASES.items() if any(alias.lower() in haystack for alias in aliases)]
 
 
+# 返回材料不满足要求的原因列表；空列表表示兼容。
 def material_requirement_mismatches(requirement: MaterialRequirement, material: dict[str, Any]) -> list[str]:
     """Return human-readable reasons why a material cannot satisfy a template requirement."""
     reasons: list[str] = []
@@ -105,12 +114,15 @@ def _number(value: Any) -> float | None:
         return None
 
 
+# 计算稳定材料快照指纹，用于识别 reference 绑定是否发生源数据漂移。
 def checksum(record: dict[str, Any]) -> str:
     payload = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 class RuiWareMaterialLibrary:
+    """只读材料库适配器，屏蔽 RuiWare SQLite 表结构细节。"""
+
     """Read-only adapter for the existing RuiWare material database."""
 
     source_id = "ruiware-materials"

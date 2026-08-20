@@ -1,3 +1,9 @@
+"""SQLite 持久化层。
+
+负责保存模板草稿、历史修订、材料绑定、编译记录和发布版本。
+API 层只调用这里的方法，不直接拼 SQL。
+"""
+
 from __future__ import annotations
 
 import json
@@ -42,6 +48,7 @@ class Repository:
         except Exception:
             return None
 
+    # 初始化平台本地数据库表结构；重复调用也不会破坏已有数据。
     def initialize(self) -> None:
         with self.connect() as connection:
             connection.executescript(
@@ -98,6 +105,7 @@ class Repository:
             if "archived_at" not in columns:
                 connection.execute("ALTER TABLE template_drafts ADD COLUMN archived_at TEXT")
 
+    # 创建材料绑定；reference 跟随源材料变化，copy 固化当前材料快照。
     def create_binding(self, source_record_id: str, mode: str) -> MaterialBinding:
         if mode not in {"reference", "copy"}:
             raise ValueError("mode must be reference or copy")
@@ -144,6 +152,7 @@ class Repository:
             raise KeyError(binding_id)
         return self._binding_payload(row)
 
+    # 解析材料绑定，返回当前材料记录和来源漂移信息。
     def resolve_binding(self, binding_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
         binding = self.get_binding(binding_id)
         material = binding["snapshot"] if binding["mode"] == "copy" else self.material_library.get(binding["sourceRecordId"])
@@ -187,6 +196,7 @@ class Repository:
                 return False
         return True
 
+    # 保存草稿并自动生成新修订；通过 expected_revision 做乐观并发控制。
     def save_draft(
         self,
         draft: TemplateDraft,
@@ -297,6 +307,7 @@ class Repository:
             connection.execute("UPDATE template_drafts SET archived_at = NULL, updated_at = ? WHERE id = ?", (_now(), draft_id))
         return draft
 
+    # 复制一个草稿，生成新 ID、新编码和从 1 开始的修订历史。
     def duplicate_draft(self, draft_id: str) -> TemplateDraft:
         source = self.get_draft(draft_id)
         suffix = 1
@@ -336,6 +347,7 @@ class Repository:
             for row in rows
         ]
 
+    # 从历史修订恢复草稿内容，并作为新的当前修订保存。
     def restore_revision(self, draft_id: str, revision: int) -> TemplateDraft:
         current = self.get_draft(draft_id)
         with self.connect() as connection:
@@ -354,6 +366,7 @@ class Repository:
             apply_invalidation=False,
         )
 
+    # 记录一次 CAD 编译结果，后续审查和发布会读取最新记录。
     def record_compile(self, draft_id: str | None, result: dict[str, Any]) -> None:
         with self.connect() as connection:
             connection.execute(
@@ -376,6 +389,7 @@ class Repository:
             ).fetchone()
         return CompileResult.model_validate_json(row["result_json"]) if row else None
 
+    # 冻结当前草稿修订为不可变发布版本。
     def publish(self, draft: TemplateDraft, result: CompileResult, source_package_url: str) -> PublishedVersion:
         with self.connect() as connection:
             row = connection.execute(

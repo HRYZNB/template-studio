@@ -1,3 +1,9 @@
+"""本地 MCP/JSON-RPC 服务。
+
+它把平台 API 封装成外部工程助手可调用的工具：读取上下文、求解草图、
+预览提案和在用户确认后提交提案。
+"""
+
 from __future__ import annotations
 
 import json
@@ -41,6 +47,7 @@ TOOLS = [
 ]
 
 
+# 把普通 Python 对象包装成 MCP 文本响应。
 def _result(value: Any) -> dict[str, Any]:
     return {"content": [{"type": "text", "text": json.dumps(value, ensure_ascii=False, indent=2)}]}
 
@@ -49,6 +56,7 @@ class McpApplication:
     def __init__(self, client: RuiWareApiClient | None = None) -> None:
         self.client = client or RuiWareApiClient()
 
+    # 根据 MCP 工具名转发到 Template API 对应接口。
     def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         draft_id = arguments.get("draftId", "")
         if name == "ruiware_get_draft_context":
@@ -69,6 +77,7 @@ class McpApplication:
             return _result(self.client.get(f"/template-drafts/{draft_id}/stages/{arguments['stage']}/validate"))
         raise ValueError(f"Unknown tool: {name}")
 
+    # 处理 JSON-RPC 请求，包括初始化、工具列表和工具调用。
     def handle(self, request: dict[str, Any]) -> dict[str, Any] | None:
         method = request.get("method")
         request_id = request.get("id")
@@ -87,6 +96,7 @@ class McpApplication:
         return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32601, "message": f"Method not found: {method}"}}
 
 
+# stdio 模式主循环，供 MCP 客户端作为本地进程启动。
 def main() -> None:
     app = McpApplication()
     for line in sys.stdin:

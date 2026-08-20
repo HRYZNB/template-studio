@@ -1,3 +1,9 @@
+"""参数化二维语义草图求解器。
+
+求解器会在最小、标称、最大工况下同时检查几何、尺寸约束和拓扑，
+让后续 lowering 和 CAD Worker 可以信任草图结果。
+"""
+
 from __future__ import annotations
 
 import math
@@ -270,6 +276,7 @@ def _constraint_residuals(
     return residuals, owners
 
 
+# 用阻尼 Gauss-Newton 迭代求解草图状态，并返回残差和雅可比秩信息。
 def _solve_state(
     draft: TemplateDraft, parameters: dict[str, float]
 ) -> tuple[np.ndarray, int, list[str], float]:
@@ -340,6 +347,7 @@ def _segments_intersect(a: Point, b: Point, c: Point, d: Point) -> bool:
     return _orientation(a, b, c) * _orientation(a, b, d) < -1e-8 and _orientation(c, d, a) * _orientation(c, d, b) < -1e-8
 
 
+# 求解一个工况，并检查闭合区域、自交、退化和拓扑签名。
 def _case(draft: TemplateDraft, case: str, overrides: dict[str, float] | None) -> dict[str, Any]:
     parameters, diagnostics = _parameter_values(draft, case, overrides)
     state, degrees_of_freedom, redundant, maximum_residual = _solve_state(draft, parameters)
@@ -444,6 +452,7 @@ def _case(draft: TemplateDraft, case: str, overrides: dict[str, float] | None) -
     }
 
 
+# 草图求解总入口，返回前端画布和阶段校验共同使用的完整诊断结果。
 def solve_semantic_sketch(draft: TemplateDraft, overrides: dict[str, float] | None = None) -> dict[str, Any]:
     topology_diagnostics: list[dict[str, str]] = []
     entity_ids = {item.id for item in draft.sketch.entities}

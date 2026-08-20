@@ -1,3 +1,9 @@
+"""模板工程的高层元模型。
+
+这里描述的是“工程意图”：参数来源、材料要求、几何配方、制造特征、
+零部件接口、变体和求值结果，而不是具体数据库或 UI 状态。
+"""
+
 from __future__ import annotations
 
 from typing import Any, Literal
@@ -116,6 +122,8 @@ class ParameterSource(BaseModel):
 
 
 class ParameterDefinition(BaseModel):
+    """一个可求值模板参数的定义。"""
+
     id: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9_]*$")
     label: str
     displayName: str | None = None
@@ -189,6 +197,8 @@ class SemanticFaceDefinition(BaseModel):
 
 
 class GeometryRecipe(BaseModel):
+    """几何配方：说明草图和操作如何生成三维实体。"""
+
     id: str = "geometry.main"
     constructionMode: Literal[
         "extrude", "revolve", "sweep", "loft", "sheetMetal", "coldRollForming",
@@ -237,6 +247,8 @@ class FeaturePlacement(BaseModel):
 
 
 class FeatureRule(BaseModel):
+    """制造特征规则：用表达式生成孔、槽、切口等特征集合。"""
+
     id: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9_.-]*$")
     name: str
     featureType: Literal["circularHole", "straightSlot", "rectangularCutout", "polygonalCutout"]
@@ -261,6 +273,8 @@ class InterfaceReferenceFrame(BaseModel):
 
 
 class PartInterface(BaseModel):
+    """零部件对外接口定义，用于表达定位、连接、支撑等工程语义。"""
+
     """A single-part declaration of stable geometry available to a future assembly."""
 
     id: str = Field(pattern=r"^[A-Za-z][A-Za-z0-9_.-]*$")

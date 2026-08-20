@@ -1,3 +1,10 @@
+/**
+ * 七阶段模板编辑器的前端主界面。
+ *
+ * 这里协调草稿选择、阶段切换、保存、校验、编译、发布和错误提示。
+ * 后续如果要拆前端，优先从这个文件拆出各个 Stage 组件。
+ */
+
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useLoader } from "@react-three/fiber";
 import { Bounds, Center, Grid, OrbitControls } from "@react-three/drei";
@@ -196,6 +203,7 @@ const scalar = (value: string): string | number | boolean => {
 };
 const uid = (prefix: string) => `${prefix}.${Date.now().toString(36)}`;
 
+// 根据截面模式生成默认语义草图，用于几何页面快速切换闭合区域、多区域和薄壁中心线。
 function profileModeSketch(
   mode: Draft["sketch"]["profileMode"],
   source: Draft["sketch"],
@@ -425,6 +433,7 @@ function Model({ url }: { url: string }) {
   );
 }
 
+// 显示 CAD Worker 输出的 STL 预览；没有编译结果时显示空状态。
 function CadViewer({ result }: { result: CompileResult | null }) {
   const stl = result?.artifacts.find((item) => item.kind === "stl");
   if (!stl)
@@ -472,6 +481,7 @@ type SketchTool = "select" | "point" | "line" | "rectangle" | "circle" | "arc";
 type SketchViewCommand =
   | { id: number; type: "zoomIn" | "zoomOut" | "fit" }
   | null;
+// 参数化草图画布，负责图元显示、选取、拖拽编辑和求解结果叠加。
 function ParametricSketchCanvas({
   draft,
   solution,
@@ -1501,6 +1511,7 @@ const CONSTRAINT_CONTRACTS: Record<
   angle: { minimum: 1, maximum: 1, types: ["line"], selection: "恰好 1 条直线；角度相对 X 轴" },
 };
 
+// 草图设计意图编辑器，集中编辑图元、几何约束、尺寸约束和截面区域。
 function SketchIntentEditor({
   draft,
   solution,
@@ -2920,6 +2931,7 @@ function SketchIntentEditor({
   );
 }
 
+// 应用主组件：管理当前草稿、阶段、材料列表、编译结果和全局提示。
 export default function App() {
   const initialized = useRef(false);
   const [drafts, setDrafts] = useState<Draft[]>([]);
@@ -3467,6 +3479,7 @@ export default function App() {
   );
 }
 
+// 阶段 01：编辑模板身份、制造分类、几何原型和设计证据附件。
 function TemplateInfo({
   draft,
   change,
@@ -3837,6 +3850,7 @@ function TemplateInfo({
   );
 }
 
+// 阶段 02：编辑材料要求、毛坯定义，并绑定材料验证样例。
 function MaterialStage({
   draft,
   change,
@@ -4539,6 +4553,7 @@ function MaterialStage({
   );
 }
 
+// 阶段 03：编辑参数化草图、几何配方和语义面。
 function GeometryStage({
   draft,
   change,
@@ -5713,6 +5728,7 @@ function GeometryStage({
   );
 }
 
+// 阶段 04：编辑制造特征规则，例如孔、槽和切口的生成逻辑。
 function RulesStage({
   draft,
   change,
@@ -6187,6 +6203,7 @@ function previewExpressionNumber(expression: string, context: Record<string, str
   }
 }
 
+// 在前端用当前参数粗略预览单条规则的数量，帮助用户快速发现表达式问题。
 function RuleLocalPreview({ rule, parameterValues }: { rule: FeatureRule; parameterValues: Record<string, string | number | boolean> }) {
   const contourValues = { ...parameterValues };
   rule.profileDimensions.forEach((dimension) => { contourValues[dimension.id] = parameterValues[dimension.parameterId]; });
@@ -6215,6 +6232,7 @@ function RuleLocalPreview({ rule, parameterValues }: { rule: FeatureRule; parame
   );
 }
 
+// 阶段 05：编辑参数契约、零部件接口和变体，并提供试算入口。
 function ContractStage({
   draft,
   change,
@@ -6718,6 +6736,7 @@ function ContractStage({
   );
 }
 
+// 零部件接口编辑器，用于声明定位、连接、支撑等对外工程语义。
 function InterfaceEditor({
   draft,
   change,
@@ -6927,6 +6946,7 @@ function InterfaceEditor({
   );
 }
 
+// 变体编辑器，用于配置最小、标称、最大或特殊工况的参数覆盖。
 function VariantEditor({
   draft,
   change,
@@ -7072,6 +7092,7 @@ function VariantEditor({
   );
 }
 
+// 阶段 06：触发 CAD 编译，展示 B-Rep 结果、诊断和三维预览。
 function ReviewStage({
   result,
   run,
@@ -7175,6 +7196,7 @@ function ReviewStage({
   );
 }
 
+// 阶段 07：填写发布准入信息，冻结当前修订并查看已发布版本。
 function AdmissionStage({
   draft,
   change,

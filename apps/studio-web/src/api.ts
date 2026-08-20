@@ -1,3 +1,9 @@
+/** 前端访问 Template API 的轻量客户端。
+ *
+ * 这里集中处理请求格式、错误响应归一化和接口路径，
+ * 让 React 页面只关心状态和渲染。
+ */
+
 import type { CompileResult, Draft, EvaluationRequest, Material, MaterialBinding, MaterialRequirement, PublishedVersion, PublishResult, RevisionEntry, SketchSolveResult, StageActionResult, StageName, StageValidation, TemplateAuthoringRegistry, TemplateEvaluation } from './types'
 
 export type ApiErrorPayload = {
@@ -26,6 +32,7 @@ export class ApiError extends Error {
   }
 }
 
+// 所有前端 API 调用的统一请求入口；失败时抛出带错误码的 ApiError。
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options)
   if (!response.ok) {

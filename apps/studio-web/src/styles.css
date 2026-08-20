@@ -268,6 +268,8 @@ code {
   flex-direction: column;
   gap: 2px;
 }
+/* Visual system for the template studio workspace and its stage panels. */
+
 .stage-link {
   border: 0;
   background: transparent;

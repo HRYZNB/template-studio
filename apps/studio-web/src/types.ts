@@ -1,3 +1,5 @@
+/** 前端使用的 API 类型镜像，基本对应后端 Pydantic 模型。 */
+
 export type StageName =
   | "templateInfo"
   | "material"

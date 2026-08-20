@@ -1,3 +1,9 @@
+"""七阶段模板校验流水线。
+
+每个阶段都是 UI 和 API 使用的业务检查点，用于判断是否可继续、
+还缺哪些输入，以及哪些错误会阻塞发布。
+"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -18,6 +24,7 @@ def _validation(stage: StageName, checks: list[StageCheck]) -> StageValidation:
     return StageValidation(stage=stage, complete=all(item.passed for item in blocking), progress=progress, checks=checks)
 
 
+# 材料阶段校验：检查材料要求、毛坯、材料验证样例和边界样例。
 def validate_material(draft: TemplateDraft, sample_contexts: list[dict[str, Any]] | None = None) -> StageValidation:
     requirements = draft.materialRequirements
     requirement_complete = bool(requirements and all(item.supplyForm and item.reviewed for item in requirements))
@@ -87,6 +94,7 @@ def validate_material(draft: TemplateDraft, sample_contexts: list[dict[str, Any]
     return _validation("material", checks)
 
 
+# 几何草图阶段校验：检查草图图元、约束、区域和配方是否可用于 CAD。
 def validate_base_sketch(draft: TemplateDraft) -> StageValidation:
     required: set[str] = set()
     expression_syntax_valid = True
@@ -165,6 +173,7 @@ def validate_base_sketch(draft: TemplateDraft) -> StageValidation:
     return _validation("baseSketch", checks)
 
 
+# 制造特征阶段校验：检查特征规则能否安全求值并生成有效特征。
 def validate_features(draft: TemplateDraft) -> StageValidation:
     evaluation = evaluate_template(
         draft.parameterDefinitions, draft.featureRules,
@@ -181,6 +190,7 @@ def validate_features(draft: TemplateDraft) -> StageValidation:
     return _validation("features", checks)
 
 
+# 契约/变体阶段校验：检查参数、接口和必要变体覆盖是否完整。
 def validate_variants(draft: TemplateDraft) -> StageValidation:
     ids = [item.id for item in draft.parameterDefinitions]
     variant_ids = [item.id for item in draft.variants]
@@ -212,6 +222,7 @@ def validate_variants(draft: TemplateDraft) -> StageValidation:
     return _validation("variants", checks)
 
 
+# 三维验证阶段校验：检查最新 CAD 编译是否成功且对应当前输入。
 def validate_review(draft: TemplateDraft, compile_result: CompileResult | None, expected_hash: str | None) -> StageValidation:
     result_ok = bool(compile_result and compile_result.success)
     hash_ok = bool(result_ok and expected_hash and compile_result and compile_result.inputHash == expected_hash)
@@ -224,6 +235,7 @@ def validate_review(draft: TemplateDraft, compile_result: CompileResult | None, 
     return _validation("review", checks)
 
 
+# 发布准入阶段校验：检查审查、复核人和版本说明是否满足发布要求。
 def validate_admission(draft: TemplateDraft, review: StageValidation) -> StageValidation:
     upstream = all(getattr(draft.stageStatus, stage) == "complete" for stage in STAGE_ORDER[:-1])
     checks = [
@@ -235,6 +247,7 @@ def validate_admission(draft: TemplateDraft, review: StageValidation) -> StageVa
     return _validation("admission", checks)
 
 
+# 七阶段统一入口，API 和测试都通过这里拿阶段结果。
 def validate_stage(stage: StageName, draft: TemplateDraft, *, code_unique: bool = True, material_samples: list[dict[str, Any]] | None = None, compile_result: CompileResult | None = None, expected_hash: str | None = None) -> StageValidation:
     if stage == "templateInfo":
         return validate_template_info(draft, code_unique=code_unique)
