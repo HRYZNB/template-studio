@@ -1,0 +1,27 @@
+[project]
+name = "ruiware-template-engineering-platform"
+version = "0.1.0"
+description = "Independent industrial part template engineering platform"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.34,<1",
+  "pydantic>=2.10,<3",
+  "cadquery-ocp>=7.8,<8",
+  "numpy>=1.26,<3",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9", "httpx>=0.28,<1"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["libs/python"]
+include = ["template_core*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["libs/python", "services/template-api", "services/cad-worker"]
+testpaths = ["tests"]

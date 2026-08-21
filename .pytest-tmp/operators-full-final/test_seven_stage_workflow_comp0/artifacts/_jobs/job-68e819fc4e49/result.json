@@ -1,0 +1,38 @@
+{
+  "success": true,
+  "inputHash": "db79985d2c80792f434cc13f488eec75bd9b15c63986e14d6113822cad503779",
+  "diagnostics": [],
+  "metrics": {
+    "valid": true,
+    "volume": 4991854.443,
+    "solidCount": 1,
+    "operationCount": 4
+  },
+  "artifacts": [
+    {
+      "kind": "step",
+      "url": "/artifacts/db79985d2c80792f/model.step",
+      "sha256": "0eac89260782a634c563855788cf20fb1e12468b346fca1fb7af944d8edab63e"
+    },
+    {
+      "kind": "stl",
+      "url": "/artifacts/db79985d2c80792f/preview.stl",
+      "sha256": "4d8d70ec70e55cdaa087677995ed60c685136b6aa357704a1a4738ba4269b932"
+    },
+    {
+      "kind": "plan",
+      "url": "/artifacts/db79985d2c80792f/canonical-plan.json",
+      "sha256": "66ea737ea0a30a5e201605cfbf30afb1816cf8f59287f1555cea235d2c95e201"
+    },
+    {
+      "kind": "semanticMap",
+      "url": "/artifacts/db79985d2c80792f/semantic-map.json",
+      "sha256": "0dd6ea9470f3e9db441289308374e9a2c01595e6e398501fdb2b895d290b57b9"
+    },
+    {
+      "kind": "diagnostics",
+      "url": "/artifacts/db79985d2c80792f/diagnostics.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "maxOutputTokens": 1200,
+  "endpoint": "",
+  "temperature": 0.2,
+  "model": "engineering-model",
+  "enabled": false,
+  "timeoutSeconds": 30,
+  "protocol": "openai-compatible"
+}

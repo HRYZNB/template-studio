@@ -1,0 +1,103 @@
+{
+  "version": "3.0",
+  "inputHash": "7253580863eff9fa6ed1d1319558a1ee073974f8a57d344d8962f86ff3fc4cc9",
+  "operations": [
+    {
+      "id": "body.main",
+      "operator": "sketch.region_extrude",
+      "arguments": {
+        "length": 1000.0,
+        "sketch": {
+          "profileMode": "closedRegion",
+          "plane": "XY",
+          "primitives": [
+            {
+              "id": "edge.bottom",
+              "role": "section.edge.bottom",
+              "type": "line",
+              "construction": false,
+              "start": {
+                "x": -40.000000000036664,
+                "y": -25.0
+              },
+              "end": {
+                "x": 40.000000000036664,
+                "y": -25.0
+              }
+            },
+            {
+              "id": "edge.right",
+              "role": "section.edge.right",
+              "type": "line",
+              "construction": false,
+              "start": {
+                "x": 40.00000000010332,
+                "y": -25.0
+              },
+              "end": {
+                "x": 40.000000000153385,
+                "y": 25.0
+              }
+            },
+            {
+              "id": "edge.top",
+              "role": "section.edge.top",
+              "type": "line",
+              "construction": false,
+              "start": {
+                "x": 40.00000000017995,
+                "y": 25.0
+              },
+              "end": {
+                "x": -40.00000000017995,
+                "y": 25.0
+              }
+            },
+            {
+              "id": "edge.left",
+              "role": "section.edge.left",
+              "type": "line",
+              "construction": false,
+              "start": {
+                "x": -40.000000000153385,
+                "y": 25.0
+              },
+              "end": {
+                "x": -40.00000000010332,
+                "y": -25.0
+              }
+            }
+          ],
+          "regions": [
+            {
+              "id": "section.region.main",
+              "operation": "add",
+              "boundaryRefs": [
+                "edge.bottom",
+                "edge.right",
+                "edge.top",
+                "edge.left"
+              ],
+              "closed": true,
+              "area": 4000.0000000101663
+            }
+          ],
+          "topologySignature": "add:edge.bottom,edge.right,edge.top,edge.left",
+          "thickness": 2.0
+        }
+      },
+      "semanticOutputs": [
+        "part.body",
+        "part.referenceFrame",
+        "part.endFace.start",
+        "part.endFace.end"
+      ]
+    }
+  ],
+  "materialSnapshot": {
+    "record": {
+      "code": "Q345"
+    }
+  },
+  "diagnostics": []
+}

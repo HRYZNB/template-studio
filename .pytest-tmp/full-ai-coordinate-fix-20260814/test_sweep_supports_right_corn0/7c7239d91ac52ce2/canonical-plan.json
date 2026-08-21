@@ -1,0 +1,75 @@
+{
+  "version": "3.0",
+  "inputHash": "7c7239d91ac52ce2e2ee30210e64cca892169744e7ea2f27c93442cd442d46da",
+  "operations": [
+    {
+      "id": "body.main",
+      "operator": "solid.sweep",
+      "arguments": {
+        "pathPoints": "0.0:0.0:0.0;0.0:0.0:100.0;100.0:0.0:100.0",
+        "sketch": {
+          "profileMode": "multiRegion",
+          "plane": "XY",
+          "primitives": [
+            {
+              "id": "circle.outer",
+              "role": "section.outer",
+              "type": "circle",
+              "construction": false,
+              "center": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "radius": 20.0
+            },
+            {
+              "id": "circle.inner",
+              "role": "section.inner",
+              "type": "circle",
+              "construction": false,
+              "center": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "radius": 15.0
+            }
+          ],
+          "regions": [
+            {
+              "id": "region.outer",
+              "operation": "add",
+              "boundaryRefs": [
+                "circle.outer"
+              ],
+              "closed": true,
+              "area": 1256.6370614359173
+            },
+            {
+              "id": "region.inner",
+              "operation": "subtract",
+              "boundaryRefs": [
+                "circle.inner"
+              ],
+              "closed": true,
+              "area": 706.8583470577034
+            }
+          ],
+          "topologySignature": "add:circle.outer|subtract:circle.inner",
+          "thickness": 2.0
+        }
+      },
+      "semanticOutputs": [
+        "part.body",
+        "part.referenceFrame",
+        "part.endFace.start",
+        "part.endFace.end"
+      ]
+    }
+  ],
+  "materialSnapshot": {
+    "record": {
+      "code": "Q345"
+    }
+  },
+  "diagnostics": []
+}

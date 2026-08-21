@@ -1,0 +1,12 @@
+{
+  "name": "ruiware-template-engineering-platform",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:web": "bun --cwd apps/studio-web dev",
+    "build:web": "bun --cwd apps/studio-web build",
+    "test:web": "bun --cwd apps/studio-web test"
+  }
+}
+

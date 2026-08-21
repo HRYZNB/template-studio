@@ -1,0 +1,86 @@
+{
+  "version": "1.0",
+  "inputHash": "db681592716a122b53ddf777938486308232a41432c6fcf5eb309ffe463687d1",
+  "interfaces": [
+    {
+      "id": "part.body",
+      "sourceOperation": "body.main"
+    },
+    {
+      "id": "part.referenceFrame",
+      "sourceOperation": "body.main"
+    },
+    {
+      "id": "part.endFace.start",
+      "sourceOperation": "body.main"
+    },
+    {
+      "id": "part.endFace.end",
+      "sourceOperation": "body.main"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.001.center",
+      "sourceOperation": "cut.upright.mainHoleRow.001"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.001.wall",
+      "sourceOperation": "cut.upright.mainHoleRow.001"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.002.center",
+      "sourceOperation": "cut.upright.mainHoleRow.002"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.002.wall",
+      "sourceOperation": "cut.upright.mainHoleRow.002"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.003.center",
+      "sourceOperation": "cut.upright.mainHoleRow.003"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.003.wall",
+      "sourceOperation": "cut.upright.mainHoleRow.003"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.004.center",
+      "sourceOperation": "cut.upright.mainHoleRow.004"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.004.wall",
+      "sourceOperation": "cut.upright.mainHoleRow.004"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.005.center",
+      "sourceOperation": "cut.upright.mainHoleRow.005"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.005.wall",
+      "sourceOperation": "cut.upright.mainHoleRow.005"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.006.center",
+      "sourceOperation": "cut.upright.mainHoleRow.006"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.006.wall",
+      "sourceOperation": "cut.upright.mainHoleRow.006"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.007.center",
+      "sourceOperation": "cut.upright.mainHoleRow.007"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.007.wall",
+      "sourceOperation": "cut.upright.mainHoleRow.007"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.008.center",
+      "sourceOperation": "cut.upright.mainHoleRow.008"
+    },
+    {
+      "id": "feature.upright.mainHoleRow.008.wall",
+      "sourceOperation": "cut.upright.mainHoleRow.008"
+    }
+  ]
+}

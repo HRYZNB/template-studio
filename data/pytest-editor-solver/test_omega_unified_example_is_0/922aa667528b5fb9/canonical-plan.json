@@ -1,0 +1,135 @@
+{
+  "version": "3.0",
+  "inputHash": "922aa667528b5fb9226bce6510ca35ac87b69ec453f6df14b9cf2086d62ac935",
+  "operations": [
+    {
+      "id": "body.main",
+      "operator": "profile.return_flange_extrude",
+      "arguments": {
+        "depth": 70.0,
+        "length": 2400.0,
+        "lip": 20.0,
+        "thickness": 2.0,
+        "width": 90.0
+      },
+      "semanticOutputs": [
+        "part.body",
+        "part.referenceFrame",
+        "part.endFace.start",
+        "part.endFace.end"
+      ]
+    },
+    {
+      "id": "cut.upright.mainHoleRow.001",
+      "operator": "machining.circular_through_hole",
+      "arguments": {
+        "x": 0,
+        "diameter": 12,
+        "z": 100.0
+      },
+      "semanticOutputs": [
+        "feature.upright.mainHoleRow.001.center",
+        "feature.upright.mainHoleRow.001.wall"
+      ]
+    },
+    {
+      "id": "cut.upright.mainHoleRow.002",
+      "operator": "machining.circular_through_hole",
+      "arguments": {
+        "x": 0,
+        "diameter": 12,
+        "z": 414.2857142857143
+      },
+      "semanticOutputs": [
+        "feature.upright.mainHoleRow.002.center",
+        "feature.upright.mainHoleRow.002.wall"
+      ]
+    },
+    {
+      "id": "cut.upright.mainHoleRow.003",
+      "operator": "machining.circular_through_hole",
+      "arguments": {
+        "x": 0,
+        "diameter": 12,
+        "z": 728.5714285714286
+      },
+      "semanticOutputs": [
+        "feature.upright.mainHoleRow.003.center",
+        "feature.upright.mainHoleRow.003.wall"
+      ]
+    },
+    {
+      "id": "cut.upright.mainHoleRow.004",
+      "operator": "machining.circular_through_hole",
+      "arguments": {
+        "x": 0,
+        "diameter": 12,
+        "z": 1042.857142857143
+      },
+      "semanticOutputs": [
+        "feature.upright.mainHoleRow.004.center",
+        "feature.upright.mainHoleRow.004.wall"
+      ]
+    },
+    {
+      "id": "cut.upright.mainHoleRow.005",
+      "operator": "machining.circular_through_hole",
+      "arguments": {
+        "x": 0,
+        "diameter": 12,
+        "z": 1357.142857142857
+      },
+      "semanticOutputs": [
+        "feature.upright.mainHoleRow.005.center",
+        "feature.upright.mainHoleRow.005.wall"
+      ]
+    },
+    {
+      "id": "cut.upright.mainHoleRow.006",
+      "operator": "machining.circular_through_hole",
+      "arguments": {
+        "x": 0,
+        "diameter": 12,
+        "z": 1671.4285714285713
+      },
+      "semanticOutputs": [
+        "feature.upright.mainHoleRow.006.center",
+        "feature.upright.mainHoleRow.006.wall"
+      ]
+    },
+    {
+      "id": "cut.upright.mainHoleRow.007",
+      "operator": "machining.circular_through_hole",
+      "arguments": {
+        "x": 0,
+        "diameter": 12,
+        "z": 1985.7142857142858
+      },
+      "semanticOutputs": [
+        "feature.upright.mainHoleRow.007.center",
+        "feature.upright.mainHoleRow.007.wall"
+      ]
+    },
+    {
+      "id": "cut.upright.mainHoleRow.008",
+      "operator": "machining.circular_through_hole",
+      "arguments": {
+        "x": 0,
+        "diameter": 12,
+        "z": 2300.0
+      },
+      "semanticOutputs": [
+        "feature.upright.mainHoleRow.008.center",
+        "feature.upright.mainHoleRow.008.wall"
+      ]
+    }
+  ],
+  "materialSnapshot": {
+    "record": {
+      "code": "COIL-Q355-2",
+      "thickness": 2,
+      "grade": "Q355"
+    }
+  },
+  "diagnostics": []
+}

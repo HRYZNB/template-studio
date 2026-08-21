@@ -1,0 +1,29 @@
+{
+  "version": "3.0",
+  "inputHash": "0cbde61a76ad76e5190f6d71102a47a1554b3d74482d47b45ba5ef3fbefb58c3",
+  "operations": [
+    {
+      "id": "body.main",
+      "operator": "sheet.bend",
+      "arguments": {
+        "length": 300,
+        "width": 80,
+        "thickness": 2,
+        "bendPosition": 180,
+        "bendAngleDegrees": 90
+      },
+      "semanticOutputs": [
+        "part.body",
+        "part.referenceFrame",
+        "part.endFace.start",
+        "part.endFace.end"
+      ]
+    }
+  ],
+  "materialSnapshot": {
+    "record": {
+      "code": "Q345"
+    }
+  },
+  "diagnostics": []
+}

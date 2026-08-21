@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ruiware.local/contracts/template-draft.schema.json",
+  "title": "TemplateDraft 3.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "templateKind", "code", "name", "description", "designIntent",
+    "manufacturingClassification", "geometryPrototypeId", "materialRequirements", "materialValidationSamples",
+    "blank", "sketch", "parameterDefinitions", "geometryRecipe", "featureRules",
+    "featureRulesReviewed", "interfaces", "variants", "stageStatus", "revision"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "3.0"},
+    "templateKind": {"const": "monolithicPart"},
+    "id": {"type": ["string", "null"]},
+    "code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_-]{2,39}$"},
+    "name": {"type": "string", "minLength": 1, "maxLength": 120},
+    "description": {"type": "string"},
+    "designIntent": {"type": "string"},
+    "manufacturingClassification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["originId", "primaryProcessId", "secondaryProcessIds", "reviewed"],
+      "properties": {
+        "originId": {"type": "string"},
+        "primaryProcessId": {"type": "string"},
+        "secondaryProcessIds": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "reviewed": {"type": "boolean"}
+      }
+    },
+    "geometryPrototypeId": {"type": "string"},
+    "tags": {"type": "array", "maxItems": 20, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "owner": {"type": "string"}, "organization": {"type": "string"},
+    "unitSystem": {"const": "mm-kg-s"}, "coordinateSystem": {"const": "right-handed-z-up"},
+    "lifecycleStatus": {"enum": ["draft", "review", "published"]},
+    "stageStatus": {"type": "object"}, "attachments": {"type": "array"},
+    "materialRequirements": {"type": "array"}, "materialValidationSamples": {"type": "array"},
+    "blank": {"type": "object"},
+    "sketch": {
+      "type": "object",
+      "required": ["model", "acquisitionMethod", "plane", "profileMode", "drivingParameters", "entities", "constraints", "regions", "constraintsReviewed", "conversionReviewed"],
+      "properties": {
+        "model": {"const": "semanticProfile"},
+        "acquisitionMethod": {"enum": ["manual", "imported", "reused"]},
+        "plane": {"enum": ["XY", "XZ", "YZ"]},
+        "profileMode": {"enum": ["closedRegion", "multiRegion"]},
+        "drivingParameters": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+        "entities": {"type": "array", "minItems": 1},
+        "constraints": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["id", "constraintType", "entityRefs", "enabled", "driving"]}},
+        "regions": {"type": "array", "minItems": 1},
+        "constraintsReviewed": {"type": "boolean"},
+        "sourceAttachmentId": {"type": ["string", "null"]},
+        "sourceProfileId": {"type": ["string", "null"]},
+        "sourceHash": {"type": ["string", "null"]},
+        "importUnit": {"enum": ["mm", "cm", "m", "inch", null]},
+        "importScale": {"type": ["number", "null"], "exclusiveMinimum": 0},
+        "conversionReviewed": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "parameterDefinitions": {"type": "array"}, "geometryRecipe": {"type": "object"},
+    "featureRules": {"type": "array"}, "featureRulesReviewed": {"type": "boolean"},
+    "interfaces": {"type": "array"}, "variants": {"type": "array"},
+    "evidence": {"type": "array"}, "aiProposals": {"type": "array"}, "admission": {"type": "object"},
+    "revision": {"type": "integer", "minimum": 1}, "createdAt": {"type": ["string", "null"]}, "updatedAt": {"type": ["string", "null"]}
+  }
+}

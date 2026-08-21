@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "inputHash": "b5d98a2cc1b342f0d3aca0b1de3e2e45f8f6b673f8a0a812bd9b8d688d01de1a",
+  "interfaces": [
+    {
+      "id": "part.body",
+      "sourceOperation": "body.main"
+    },
+    {
+      "id": "part.referenceFrame",
+      "sourceOperation": "body.main"
+    },
+    {
+      "id": "part.endFace.start",
+      "sourceOperation": "body.main"
+    },
+    {
+      "id": "part.endFace.end",
+      "sourceOperation": "body.main"
+    },
+    {
+      "id": "feature.cutouts.001.center",
+      "sourceOperation": "cut.cutouts.001"
+    },
+    {
+      "id": "feature.cutouts.001.wall",
+      "sourceOperation": "cut.cutouts.001"
+    },
+    {
+      "id": "feature.holes.001.center",
+      "sourceOperation": "cut.holes.001"
+    },
+    {
+      "id": "feature.holes.001.wall",
+      "sourceOperation": "cut.holes.001"
+    },
+    {
+      "id": "feature.slots.001.center",
+      "sourceOperation": "cut.slots.001"
+    },
+    {
+      "id": "feature.slots.001.wall",
+      "sourceOperation": "cut.slots.001"
+    }
+  ]
+}
