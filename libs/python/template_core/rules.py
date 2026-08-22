@@ -1,9 +1,3 @@
-"""模板语义的安全表达式求值和规则展开。
-
-规则引擎负责解析参数、制造特征和零部件接口，同时拒绝不安全或
-不确定的表达式，保证同一输入得到同一结果。
-"""
-
 from __future__ import annotations
 
 import ast
@@ -41,8 +35,6 @@ _FUNCTIONS = {
 
 
 class _SafeEvaluator:
-    """受限表达式解释器，只允许工程规则需要的安全语法。"""
-
     def __init__(self, context: Mapping[str, Any]):
         self.context = context
 
@@ -133,12 +125,10 @@ class _SafeEvaluator:
         raise RuleEvaluationError(f"syntax not allowed: {type(node).__name__}")
 
 
-# 求值单个表达式；外部只应通过这个入口使用安全表达式能力。
 def evaluate_expression(expression: str, context: Mapping[str, Any]) -> Scalar:
     return _SafeEvaluator(context).evaluate(expression)
 
 
-# 提取表达式中引用的名称，用于建立参数依赖图。
 def expression_names(expression: str) -> set[str]:
     try:
         tree = ast.parse(expression, mode="eval")
@@ -165,7 +155,6 @@ def _parameter_dependencies(definition: ParameterDefinition, parameter_ids: set[
     return dependencies
 
 
-# 对参数定义做拓扑排序，保证公式参数先拿到依赖值。
 def parameter_evaluation_order(definitions: list[ParameterDefinition]) -> list[str]:
     by_id = {item.id: item for item in definitions}
     if len(by_id) != len(definitions):
@@ -225,7 +214,6 @@ def _coerce(definition: ParameterDefinition, value: Scalar) -> Scalar:
     return value
 
 
-# 按参数来源、默认值、覆盖值和上下文解析最终参数值。
 def resolve_parameters(
     definitions: list[ParameterDefinition],
     overrides: Mapping[str, Scalar] | None = None,
@@ -280,7 +268,6 @@ def resolve_parameters(
 _DEFAULT_SEMANTIC_FACES = [SemanticFaceDefinition(id="part.face.front", label="前侧面", hostFrame="negativeY")]
 
 
-# 将动态特征规则展开为确定数量的孔、槽、切口等静态特征。
 def resolve_feature_rules(
     rules: list[FeatureRule], context: Mapping[str, Any], semantic_faces: list[SemanticFaceDefinition] | None = None,
 ) -> tuple[list[ResolvedFeature], list[EvaluationDiagnostic]]:
@@ -407,7 +394,6 @@ def _validate_polygon(vertices: list[tuple[float, float]]) -> None:
                 raise RuleEvaluationError("polygon edges must not self-intersect or overlap")
 
 
-# 模板试算总入口：解析参数、展开特征、解析接口并返回诊断。
 def evaluate_template(
     definitions: list[ParameterDefinition],
     rules: list[FeatureRule],
@@ -432,7 +418,6 @@ def evaluate_template(
     )
 
 
-# 根据静态定义或已解析特征生成对外接口结果。
 def resolve_part_interfaces(
     interfaces: list[PartInterface],
     rules: list[FeatureRule],

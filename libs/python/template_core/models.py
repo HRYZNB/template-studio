@@ -1,9 +1,3 @@
-"""模板工程平台的核心运行时数据模型。
-
-这些模型是前端、API、草图求解器、lowering、CAD Worker 和发布流程
-之间共享的数据契约，理解项目时建议先从 TemplateDraft 看起。
-"""
-
 from __future__ import annotations
 
 from typing import Any, Literal
@@ -129,6 +123,9 @@ class SemanticSketchConstraint(BaseModel):
     label: str = ""
     constraintType: Literal["coincident", "horizontal", "vertical", "parallel", "perpendicular", "tangent", "concentric", "symmetric", "equal", "distance", "distanceX", "distanceY", "radius", "diameter", "angle", "fixed", "pointOn", "closed"]
     entityRefs: list[str] = Field(default_factory=list)
+    # For coincident pairs: which endpoint of each entity participates ("start" | "end").
+    # Legacy omissions default to end→start chain semantics in the solver.
+    endpointRefs: list[Literal["start", "end"]] = Field(default_factory=list)
     expression: str | None = None
     parameterId: str | None = None
     value: float | None = None
@@ -164,7 +161,10 @@ class SketchDefinition(BaseModel):
         SemanticSketchEntity(id="edge.left", role="section.edge.left", start=(-50, 25), end=(-50, -25), parameterRefs=["sectionHeight"]),
     ])
     constraints: list[SemanticSketchConstraint] = Field(default_factory=lambda: [
-        SemanticSketchConstraint(id="constraint.loop.closed", constraintType="closed", entityRefs=["edge.bottom", "edge.right", "edge.top", "edge.left"]),
+        SemanticSketchConstraint(id="constraint.loop.joint.1", constraintType="coincident", entityRefs=["edge.bottom", "edge.right"], endpointRefs=["end", "start"], label="首尾相连 1"),
+        SemanticSketchConstraint(id="constraint.loop.joint.2", constraintType="coincident", entityRefs=["edge.right", "edge.top"], endpointRefs=["end", "start"], label="首尾相连 2"),
+        SemanticSketchConstraint(id="constraint.loop.joint.3", constraintType="coincident", entityRefs=["edge.top", "edge.left"], endpointRefs=["end", "start"], label="首尾相连 3"),
+        SemanticSketchConstraint(id="constraint.loop.joint.4", constraintType="coincident", entityRefs=["edge.left", "edge.bottom"], endpointRefs=["end", "start"], label="首尾相连 4"),
         SemanticSketchConstraint(id="constraint.horizontal", constraintType="horizontal", entityRefs=["edge.bottom", "edge.top"]),
         SemanticSketchConstraint(id="constraint.vertical", constraintType="vertical", entityRefs=["edge.left", "edge.right"]),
         SemanticSketchConstraint(id="dimension.width", constraintType="distanceX", entityRefs=["edge.bottom"], parameterId="sectionWidth", driverMode="parameter"),
@@ -186,7 +186,6 @@ class AdmissionDefinition(BaseModel):
     releaseChannel: Literal["development", "pilot", "production"] = "development"
 
 
-# 新建草稿时使用的默认参数集合，保证几何、材料和规则有基础输入。
 def default_parameter_definitions() -> list[ParameterDefinition]:
     return [
         ParameterDefinition(id="length", label="长度", default=1000, minimum=100, maximum=6000, sourceDefinition={"type": "userInput"}),
@@ -196,12 +195,10 @@ def default_parameter_definitions() -> list[ParameterDefinition]:
     ]
 
 
-# 新建草稿时使用的默认材料要求。
 def default_material_requirement() -> MaterialRequirement:
     return MaterialRequirement()
 
 
-# 新建草稿时使用的默认几何配方，默认从语义草图拉伸实体。
 def default_geometry_recipe() -> GeometryRecipe:
     return GeometryRecipe(
         constructionMode="extrude",
@@ -228,12 +225,6 @@ def default_geometry_recipe() -> GeometryRecipe:
 
 
 class TemplateDraft(BaseModel):
-    """平台最核心的草稿对象。
-
-    一个 TemplateDraft 包含模板身份、材料、草图、参数、规则、接口、
-    阶段状态和发布信息，是整个工程链路流转的主数据。
-    """
-
     model_config = ConfigDict(extra="forbid")
     schemaVersion: Literal["3.0"] = "3.0"
     templateKind: Literal["monolithicPart"] = "monolithicPart"

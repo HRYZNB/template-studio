@@ -1,0 +1,38 @@
+{
+  "version": "1.0",
+  "inputHash": "23001be3ba5792694f3d9204f7cc68eb6dd5a3a981d6bfbfe2fd3ca563667684",
+  "interfaces": [
+    {
+      "id": "part.body",
+      "sourceOperation": "body.main"
+    },
+    {
+      "id": "part.referenceFrame",
+      "sourceOperation": "body.main"
+    },
+    {
+      "id": "part.endFace.start",
+      "sourceOperation": "body.main"
+    },
+    {
+      "id": "part.endFace.end",
+      "sourceOperation": "body.main"
+    },
+    {
+      "id": "feature.holes.main.001.center",
+      "sourceOperation": "cut.holes.main.001"
+    },
+    {
+      "id": "feature.holes.main.001.wall",
+      "sourceOperation": "cut.holes.main.001"
+    },
+    {
+      "id": "feature.holes.main.002.center",
+      "sourceOperation": "cut.holes.main.002"
+    },
+    {
+      "id": "feature.holes.main.002.wall",
+      "sourceOperation": "cut.holes.main.002"
+    }
+  ]
+}

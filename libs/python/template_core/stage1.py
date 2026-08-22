@@ -1,5 +1,3 @@
-"""第一阶段：模板身份、制造分类和注册表一致性校验。"""
-
 from __future__ import annotations
 
 import re
@@ -11,7 +9,6 @@ from .registries import registry_option_exists
 CODE_PATTERN = re.compile(r"^[A-Z][A-Z0-9_-]{2,39}$")
 
 
-# 校验模板基础信息是否足以进入后续材料和几何阶段。
 def validate_template_info(draft: TemplateDraft, *, code_unique: bool = True) -> StageValidation:
     checks = [
         StageCheck(id="code-format", label="模板编码有效", passed=bool(CODE_PATTERN.fullmatch(draft.code)), severity="error", path="code", message="编码须以字母开头，仅包含大写字母、数字、下划线或短横线，长度 3–40。"),
@@ -33,7 +30,6 @@ def validate_template_info(draft: TemplateDraft, *, code_unique: bool = True) ->
     return StageValidation(stage="templateInfo", complete=all(check.passed for check in blocking), progress=progress, checks=checks)
 
 
-# 计算第一阶段指纹，用于判断上游信息变化是否需要让下游阶段失效。
 def template_info_fingerprint(draft: TemplateDraft) -> tuple:
     return (
         draft.templateKind, draft.code, draft.name, draft.description, draft.designIntent,

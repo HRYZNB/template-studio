@@ -1,9 +1,3 @@
-"""把可编辑草稿降级为不可变 CAD 执行计划。
-
-这里会冻结材料、草图、规则和几何配方，生成 CAD Worker 可直接执行的
-CanonicalPlan，是业务模型进入几何内核前的关键边界。
-"""
-
 from __future__ import annotations
 
 import hashlib
@@ -16,17 +10,14 @@ from .rules import RuleEvaluationError, evaluate_expression, evaluate_template
 from .sketch_solver import solve_semantic_sketch
 
 
-# 生成稳定 JSON 字符串，确保哈希不受字段顺序影响。
 def canonical_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-# 计算内容哈希，用于判断同一输入是否生成同一 CAD 计划。
 def content_hash(value: Any) -> str:
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
 
 
-# 提取会影响几何和制造判断的材料字段，排除解析时间等非确定性信息。
 def stable_material_snapshot(value: dict[str, Any]) -> dict[str, Any]:
     """Remove observation time; audit timestamps are not geometry inputs."""
     snapshot = deepcopy(value)
@@ -61,7 +52,6 @@ def _resolve_structured_geometry_argument(
     return ";".join(rows)
 
 
-# CAD 前置检查，尽早拦截明显不合法的规则和几何输入。
 def _precheck(draft: TemplateDraft, values: dict[str, Any]) -> list[Diagnostic]:
     diagnostics: list[Diagnostic] = []
     sketch_solution = solve_semantic_sketch(
@@ -99,7 +89,6 @@ def _precheck(draft: TemplateDraft, values: dict[str, Any]) -> list[Diagnostic]:
     return diagnostics
 
 
-# lowering 主入口：把 TemplateDraft 转成静态操作序列和输入哈希。
 def lower_to_plan(draft: TemplateDraft, material_snapshot: dict[str, Any]) -> CanonicalPlan:
     material_snapshot = stable_material_snapshot(material_snapshot)
     external_context = {

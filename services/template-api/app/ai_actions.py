@@ -1,9 +1,3 @@
-"""外部助手提案的结构化命令处理。
-
-这里不调用任何大模型，只负责校验、预览和应用已经结构化的提案命令。
-这样可以保证 AI/外部工具的修改必须经过工程师确认后才写入草稿。
-"""
-
 from __future__ import annotations
 
 import uuid
@@ -151,7 +145,6 @@ def _normalize_entities(
     return normalized
 
 
-# 将选中的提案命令应用到草稿副本上；这里只改内存对象，不直接保存数据库。
 def apply_proposal(
     draft: TemplateDraft,
     proposal: AIModelProposal,
@@ -277,7 +270,6 @@ def apply_proposal(
     return TemplateDraft.model_validate(candidate.model_dump()), commands
 
 
-# 提案应用后做引用完整性检查，防止出现悬空参数、图元、约束或区域引用。
 def _validate_references(draft: TemplateDraft) -> None:
     parameter_ids = {item.id for item in draft.parameterDefinitions}
     entity_ids = {item.id for item in draft.sketch.entities}
@@ -300,7 +292,6 @@ def _validate_references(draft: TemplateDraft) -> None:
         raise ProposalError(f"草图驱动参数未定义：{', '.join(sorted(missing_drivers))}")
 
 
-# 生成提案预览差异，供前端或 MCP 调用方展示“改了什么”。
 def proposal_diff(draft: TemplateDraft, candidate: TemplateDraft, commands: list[AIModelCommand]) -> dict[str, Any]:
     labels = {
         "setSketchSettings": "草图设置", "replaceSketchGeometry": "草图拓扑", "upsertParameter": "参数", "removeParameter": "参数",

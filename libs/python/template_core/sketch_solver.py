@@ -1,9 +1,3 @@
-"""参数化二维语义草图求解器。
-
-求解器会在最小、标称、最大工况下同时检查几何、尺寸约束和拓扑，
-让后续 lowering 和 CAD Worker 可以信任草图结果。
-"""
-
 from __future__ import annotations
 
 import math
@@ -183,11 +177,27 @@ def _constraint_residuals(
         geometries = [_geometry(state, item) for item in refs]
         kind = constraint.constraintType
         if kind in {"coincident", "closed"}:
-            pairs = list(zip(geometries, geometries[1:]))
-            if kind == "closed" and len(geometries) > 1:
-                pairs.append((geometries[-1], geometries[0]))
-            for first, second in pairs:
-                add(constraint.id, first["end"][0] - second["start"][0], first["end"][1] - second["start"][1])
+            endpoint_refs = list(getattr(constraint, "endpointRefs", None) or [])
+            if (
+                kind == "coincident"
+                and len(geometries) == 2
+                and len(endpoint_refs) >= 2
+            ):
+                first_handle = endpoint_refs[0] if endpoint_refs[0] in {"start", "end"} else "end"
+                second_handle = endpoint_refs[1] if endpoint_refs[1] in {"start", "end"} else "start"
+                first_point = geometries[0][first_handle]
+                second_point = geometries[1][second_handle]
+                add(
+                    constraint.id,
+                    first_point[0] - second_point[0],
+                    first_point[1] - second_point[1],
+                )
+            else:
+                pairs = list(zip(geometries, geometries[1:]))
+                if kind == "closed" and len(geometries) > 1:
+                    pairs.append((geometries[-1], geometries[0]))
+                for first, second in pairs:
+                    add(constraint.id, first["end"][0] - second["start"][0], first["end"][1] - second["start"][1])
         elif kind == "horizontal":
             for geometry in geometries:
                 add(constraint.id, geometry["end"][1] - geometry["start"][1])
@@ -276,7 +286,6 @@ def _constraint_residuals(
     return residuals, owners
 
 
-# 用阻尼 Gauss-Newton 迭代求解草图状态，并返回残差和雅可比秩信息。
 def _solve_state(
     draft: TemplateDraft, parameters: dict[str, float]
 ) -> tuple[np.ndarray, int, list[str], float]:
@@ -347,7 +356,6 @@ def _segments_intersect(a: Point, b: Point, c: Point, d: Point) -> bool:
     return _orientation(a, b, c) * _orientation(a, b, d) < -1e-8 and _orientation(c, d, a) * _orientation(c, d, b) < -1e-8
 
 
-# 求解一个工况，并检查闭合区域、自交、退化和拓扑签名。
 def _case(draft: TemplateDraft, case: str, overrides: dict[str, float] | None) -> dict[str, Any]:
     parameters, diagnostics = _parameter_values(draft, case, overrides)
     state, degrees_of_freedom, redundant, maximum_residual = _solve_state(draft, parameters)
@@ -375,7 +383,8 @@ def _case(draft: TemplateDraft, case: str, overrides: dict[str, float] | None) -
         primitives.append(item)
 
     region_results: list[dict[str, Any]] = []
-    if draft.sketch.profileMode == "centerlineThinWall":
+    use_centerline_path = draft.sketch.profileMode == "centerlineThinWall" and not draft.sketch.regions
+    if use_centerline_path:
         paths = [item for item in draft.sketch.entities if not item.construction and item.geometryType == "line"]
         thickness = float(parameters.get("thickness", 0))
         continuous = bool(paths)
@@ -401,7 +410,7 @@ def _case(draft: TemplateDraft, case: str, overrides: dict[str, float] | None) -
             "closed": continuous and not unsupported and thickness > TOLERANCE,
             "area": length * thickness,
         })
-    for region in ([] if draft.sketch.profileMode == "centerlineThinWall" else draft.sketch.regions):
+    for region in ([] if use_centerline_path else draft.sketch.regions):
         loop = [slices[reference] for reference in region.boundaryRefs if reference in slices and not slices[reference].entity.construction]
         geometries = [_geometry(state, item) for item in loop]
         closed = bool(loop) and region.closed
@@ -452,7 +461,6 @@ def _case(draft: TemplateDraft, case: str, overrides: dict[str, float] | None) -
     }
 
 
-# 草图求解总入口，返回前端画布和阶段校验共同使用的完整诊断结果。
 def solve_semantic_sketch(draft: TemplateDraft, overrides: dict[str, float] | None = None) -> dict[str, Any]:
     topology_diagnostics: list[dict[str, str]] = []
     entity_ids = {item.id for item in draft.sketch.entities}

@@ -1,0 +1,75 @@
+{
+  "version": "3.0",
+  "inputHash": "6c1a405859903cb4caaa97eb7dda1a7b9385b8ef0d6c681d585434af850125a3",
+  "operations": [
+    {
+      "id": "body.main",
+      "operator": "sketch.region_extrude",
+      "arguments": {
+        "length": 1000.0,
+        "sketch": {
+          "profileMode": "multiRegion",
+          "plane": "XY",
+          "primitives": [
+            {
+              "id": "circle.outer",
+              "role": "section.outer",
+              "type": "circle",
+              "construction": false,
+              "center": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "radius": 50.0
+            },
+            {
+              "id": "circle.inner",
+              "role": "section.inner",
+              "type": "circle",
+              "construction": false,
+              "center": {
+                "x": 0.0,
+                "y": 0.0
+              },
+              "radius": 30.0
+            }
+          ],
+          "regions": [
+            {
+              "id": "region.outer",
+              "operation": "add",
+              "boundaryRefs": [
+                "circle.outer"
+              ],
+              "closed": true,
+              "area": 7853.981633974483
+            },
+            {
+              "id": "region.inner",
+              "operation": "subtract",
+              "boundaryRefs": [
+                "circle.inner"
+              ],
+              "closed": true,
+              "area": 2827.4333882308138
+            }
+          ],
+          "topologySignature": "add:circle.outer|subtract:circle.inner",
+          "thickness": 2.0
+        }
+      },
+      "semanticOutputs": [
+        "part.body",
+        "part.referenceFrame",
+        "part.endFace.start",
+        "part.endFace.end"
+      ]
+    }
+  ],
+  "materialSnapshot": {
+    "record": {
+      "code": "Q345"
+    }
+  },
+  "diagnostics": []
+}

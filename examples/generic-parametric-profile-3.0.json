@@ -34,7 +34,10 @@
       {"id":"edge.left","role":"section.edge.left","geometryType":"line","parameterRefs":["sectionHeight"],"start":[-50,25],"end":[-50,-25]}
     ],
     "constraints": [
-      {"id":"constraint.loop.closed","constraintType":"closed","entityRefs":["edge.bottom","edge.right","edge.top","edge.left"]},
+      {"id":"constraint.loop.joint.1","constraintType":"coincident","entityRefs":["edge.bottom","edge.right"],"label":"首尾相连 1"},
+      {"id":"constraint.loop.joint.2","constraintType":"coincident","entityRefs":["edge.right","edge.top"],"label":"首尾相连 2"},
+      {"id":"constraint.loop.joint.3","constraintType":"coincident","entityRefs":["edge.top","edge.left"],"label":"首尾相连 3"},
+      {"id":"constraint.loop.joint.4","constraintType":"coincident","entityRefs":["edge.left","edge.bottom"],"label":"首尾相连 4"},
       {"id":"constraint.horizontal","constraintType":"horizontal","entityRefs":["edge.bottom","edge.top"]},
       {"id":"constraint.vertical","constraintType":"vertical","entityRefs":["edge.left","edge.right"]},
       {"id":"dimension.width","constraintType":"distanceX","entityRefs":["edge.bottom"],"parameterId":"sectionWidth"},

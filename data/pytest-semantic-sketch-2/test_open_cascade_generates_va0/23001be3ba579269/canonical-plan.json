@@ -1,0 +1,56 @@
+{
+  "version": "3.0",
+  "inputHash": "23001be3ba5792694f3d9204f7cc68eb6dd5a3a981d6bfbfe2fd3ca563667684",
+  "operations": [
+    {
+      "id": "body.main",
+      "operator": "profile.return_flange_extrude",
+      "arguments": {
+        "depth": 70.0,
+        "length": 2400.0,
+        "lip": 20.0,
+        "thickness": 2.0,
+        "width": 90.0
+      },
+      "semanticOutputs": [
+        "part.body",
+        "part.referenceFrame",
+        "part.endFace.start",
+        "part.endFace.end"
+      ]
+    },
+    {
+      "id": "cut.holes.main.001",
+      "operator": "machining.circular_through_hole",
+      "arguments": {
+        "diameter": 12,
+        "x": -18,
+        "z": 200
+      },
+      "semanticOutputs": [
+        "feature.holes.main.001.center",
+        "feature.holes.main.001.wall"
+      ]
+    },
+    {
+      "id": "cut.holes.main.002",
+      "operator": "machining.circular_through_hole",
+      "arguments": {
+        "diameter": 12,
+        "x": 18,
+        "z": 450
+      },
+      "semanticOutputs": [
+        "feature.holes.main.002.center",
+        "feature.holes.main.002.wall"
+      ]
+    }
+  ],
+  "materialSnapshot": {
+    "record": {
+      "code": "Q345",
+      "grade": "Q345"
+    }
+  },
+  "diagnostics": []
+}

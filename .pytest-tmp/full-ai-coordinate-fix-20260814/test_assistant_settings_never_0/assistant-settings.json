@@ -1,0 +1,9 @@
+{
+  "maxOutputTokens": 1200,
+  "enabled": true,
+  "protocol": "openai-compatible",
+  "timeoutSeconds": 5,
+  "endpoint": "http://127.0.0.1:9/v1/chat/completions",
+  "model": "engineering-model",
+  "temperature": 0.1
+}

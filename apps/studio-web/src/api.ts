@@ -1,52 +1,11 @@
-/** 前端访问 Template API 的轻量客户端。
- *
- * 这里集中处理请求格式、错误响应归一化和接口路径，
- * 让 React 页面只关心状态和渲染。
- */
-
 import type { CompileResult, Draft, EvaluationRequest, Material, MaterialBinding, MaterialRequirement, PublishedVersion, PublishResult, RevisionEntry, SketchSolveResult, StageActionResult, StageName, StageValidation, TemplateAuthoringRegistry, TemplateEvaluation } from './types'
 
-export type ApiErrorPayload = {
-  code: string
-  message: string
-  action?: string | null
-  fields?: { path?: string; message: string; type?: string }[]
-  traceId?: string
-}
-
-export class ApiError extends Error {
-  readonly code: string
-  readonly action?: string | null
-  readonly fields: { path?: string; message: string; type?: string }[]
-  readonly traceId?: string
-  readonly status: number
-
-  constructor(status: number, payload: ApiErrorPayload) {
-    super(payload.message)
-    this.name = 'ApiError'
-    this.status = status
-    this.code = payload.code
-    this.action = payload.action
-    this.fields = payload.fields || []
-    this.traceId = payload.traceId
-  }
-}
-
-// 所有前端 API 调用的统一请求入口；失败时抛出带错误码的 ApiError。
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options)
   if (!response.ok) {
     const payload = await response.json().catch(() => ({ detail: response.statusText }))
-    const error = payload.error || payload.detail
-    if (error && typeof error === 'object' && 'code' in error && 'message' in error) {
-      throw new ApiError(response.status, error as ApiErrorPayload)
-    }
-    const detail = typeof payload.detail === 'string' ? payload.detail : response.statusText
-    throw new ApiError(response.status, {
-      code: `HTTP_${response.status}`,
-      message: detail || '请求处理失败',
-      action: '请刷新页面后重试。',
-    })
+    const detail = payload.detail
+    throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail))
   }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>

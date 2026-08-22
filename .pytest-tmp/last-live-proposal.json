@@ -1,0 +1,28 @@
+﻿{
+    "mode":  "local-fallback",
+    "message":  "AIæå¡æä¸å¯ç¨ï¼HTTP Error 504: Gateway Time-outï¼ãåæ°å®¡æ¥ï¼å½åå£°æ 4 ä¸ªåæ°ï¼å ä½è¡¨è¾¾å¼ç´æ¥è¯å«å° lengthãæªåç°ç´æ¥çæªå£°æåæ°ãå»ºè®®ç»§ç»­æ£æ¥æ¯ä¸ªå°ºå¯¸çæ¥æºãä½ç¨åãé»è®¤å¼åæå°/æå¤§è¾¹çï¼å¹¶å¨ä¸ç§å·¥åµæ±è§£ååéçº³ã",
+    "contextSummary":  {
+                           "stage":  "baseSketch",
+                           "revision":  8,
+                           "parameters":  4,
+                           "sketchEntities":  4,
+                           "constraints":  6,
+                           "operations":  1,
+                           "featureRules":  0,
+                           "focus":  {
+                                         "operationIds":  [
+                                                              "body.main"
+                                                          ],
+                                         "selectedEntityIds":  [
+
+                                                               ],
+                                         "parameterIds":  [
+                                                              "length",
+                                                              "sectionWidth",
+                                                              "sectionHeight",
+                                                              "thickness"
+                                                          ],
+                                         "kind":  "sketch"
+                                     }
+                       }
+}

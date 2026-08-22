@@ -1,0 +1,102 @@
+{
+  "version": "3.0",
+  "inputHash": "b5d98a2cc1b342f0d3aca0b1de3e2e45f8f6b673f8a0a812bd9b8d688d01de1a",
+  "operations": [
+    {
+      "id": "body.main",
+      "operator": "profile.return_flange_extrude",
+      "arguments": {
+        "depth": 50.0,
+        "length": 1000.0,
+        "lip": 15.0,
+        "thickness": 2.0,
+        "width": 100.0
+      },
+      "semanticOutputs": [
+        "part.body",
+        "part.referenceFrame",
+        "part.endFace.start",
+        "part.endFace.end"
+      ]
+    },
+    {
+      "id": "cut.cutouts.001",
+      "operator": "machining.rectangular_through_cutout",
+      "arguments": {
+        "x": 0,
+        "z": 600,
+        "width": 20,
+        "height": 30
+      },
+      "semanticOutputs": [
+        "feature.cutouts.001.center",
+        "feature.cutouts.001.wall"
+      ]
+    },
+    {
+      "id": "cut.holes.001",
+      "operator": "machining.circular_through_hole",
+      "arguments": {
+        "x": -18,
+        "z": 200,
+        "diameter": 12
+      },
+      "semanticOutputs": [
+        "feature.holes.001.center",
+        "feature.holes.001.wall"
+      ]
+    },
+    {
+      "id": "cut.slots.001",
+      "operator": "machining.straight_slot_through",
+      "arguments": {
+        "x": 18,
+        "z": 400,
+        "width": 12,
+        "length": 28
+      },
+      "semanticOutputs": [
+        "feature.slots.001.center",
+        "feature.slots.001.wall"
+      ]
+    }
+  ],
+  "materialSnapshot": {
+    "record": {
+      "id": "1",
+      "code": "COIL-Q345-2",
+      "name": "Q345冷轧卷材",
+      "type": "卷材",
+      "categoryGroup": "",
+      "dataKind": "raw",
+      "length": 6000.0,
+      "width": 1250.0,
+      "height": null,
+      "thickness": 2.0,
+      "grade": "Q345",
+      "color": null,
+      "surface": "镀锌",
+      "standard": "GB/T 2518",
+      "stockQty": 10.0,
+      "availableQty": 8.0,
+      "supplier": "A",
+      "status": "已发布",
+      "updatedAt": "2026-08-01",
+      "remark": null,
+      "supplyForms": [
+        "coil"
+      ],
+      "supplyFormSource": "由材料库类型映射"
+    },
+    "provenance": {
+      "bindingId": "mat-0be1440dc162",
+      "mode": "copy",
+      "sourceLibrary": "ruiware-materials",
+      "sourceRecordId": "1",
+      "boundChecksum": "cdbfa456436dd84730de9eea5a7f1ef866b10dd0d35f0acd764f2de86fab0ab6",
+      "resolvedChecksum": "cdbfa456436dd84730de9eea5a7f1ef866b10dd0d35f0acd764f2de86fab0ab6",
+      "drifted": false
+    }
+  },
+  "diagnostics": []
+}

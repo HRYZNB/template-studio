@@ -1,8 +1,3 @@
-"""CAD Worker 命令行入口。
-
-API 会把 CanonicalPlan 写成 JSON，然后通过这个入口启动独立进程执行。
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -13,7 +8,6 @@ from template_core.models import CanonicalPlan
 from .geometry import execute_plan
 
 
-# 读取 plan、执行几何生成、写出 result，并用退出码表达是否成功。
 def main() -> int:
     parser = argparse.ArgumentParser(description="Execute one immutable canonical CAD plan")
     parser.add_argument("--plan", required=True)

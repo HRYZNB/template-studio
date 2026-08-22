@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "inputHash": "bd238b1e9794dedc046c95c429b5eb7634504f0ebdb94c00acafd9e6ee1111c9",
+  "interfaces": [
+    {
+      "id": "part.body",
+      "sourceOperation": "body.main"
+    }
+  ]
+}

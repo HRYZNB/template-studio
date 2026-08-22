@@ -1,5 +1,3 @@
-/** 前端使用的 API 类型镜像，基本对应后端 Pydantic 模型。 */
-
 export type StageName =
   | "templateInfo"
   | "material"
@@ -433,7 +431,9 @@ export type Draft = {
         | "fixed"
         | "pointOn"
         | "closed";
-      entityRefs: string[];
+        entityRefs: string[];
+      /** Coincident: which endpoint of each entityRefs item ("start" | "end"). */
+      endpointRefs?: Array<"start" | "end">;
       expression?: string | null;
       parameterId?: string | null;
       value?: number | null;

@@ -1,5 +1,3 @@
-"""MCP 桥接服务访问 Template API 的轻量 HTTP 客户端。"""
-
 from __future__ import annotations
 
 import json
@@ -17,11 +15,9 @@ class RuiWareApiClient:
     def __init__(self, base_url: str | None = None) -> None:
         self.base_url = (base_url or os.getenv("RUIWARE_API_URL") or "http://127.0.0.1:8010/api/v1").rstrip("/")
 
-    # 发起只读 GET 请求，供 MCP 工具读取平台上下文。
     def get(self, path: str) -> Any:
         return self._request("GET", path)
 
-    # 发起 POST 请求，主要用于草图求解、提案预览和提案提交。
     def post(self, path: str, payload: dict[str, Any]) -> Any:
         return self._request("POST", path, payload)
 

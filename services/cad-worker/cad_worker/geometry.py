@@ -1,9 +1,3 @@
-"""基于 OpenCascade 的 CAD 计划执行器。
-
-这里解释 lowering 生成的静态操作，构造 B-Rep 几何，导出 STEP/STL，
-并记录编译诊断、语义映射和几何指标。
-"""
-
 from __future__ import annotations
 
 import hashlib
@@ -157,7 +151,6 @@ def _material_face(sketch):
     return face
 
 
-# 从语义草图闭合材料区域生成拉伸实体。
 def _sketch_region_extrude(arguments):
     sketch = arguments["sketch"]
     face = _material_face(sketch)
@@ -165,7 +158,6 @@ def _sketch_region_extrude(arguments):
     return BRepPrimAPI_MakePrism(face, _normal_vector(sketch.get("plane", "XY"), length)).Shape()
 
 
-# 将闭合草图区域绕指定轴旋转生成实体。
 def _sketch_revolve(arguments):
     sketch = arguments["sketch"]
     face = _material_face(sketch)
@@ -206,7 +198,6 @@ def _sweep_region(sketch, region, spine):
     return operation.Shape()
 
 
-# 将草图截面沿路径扫掠生成实体。
 def _sketch_sweep(arguments):
     sketch = arguments["sketch"]
     points = _parse_points(str(arguments.get("pathPoints", "")))
@@ -255,7 +246,6 @@ def _loft_region(sketch, region, stations):
     return operation.Shape()
 
 
-# 将多个按站点缩放的截面放样生成实体。
 def _sketch_loft(arguments):
     sketch = arguments["sketch"]
     stations = _parse_stations(str(arguments.get("stations", "")))
@@ -280,7 +270,6 @@ def _rotate_2d(vector: tuple[float, float], angle: float) -> tuple[float, float]
     )
 
 
-# 生成一个简化的单折弯钣金实体，用于确定性验证。
 def _sheet_single_bend(arguments):
     length, width, thickness = (float(arguments[name]) for name in ("length", "width", "thickness"))
     bend = float(arguments.get("bendPosition", length / 2))
@@ -338,10 +327,11 @@ def _sheet_single_bend(arguments):
     return BRepPrimAPI_MakePrism(face, gp_Vec(0, width, 0)).Shape()
 
 
-# 根据中心线和壁厚构造薄壁截面，再沿长度方向拉伸。
 def _centerline_thinwall_extrude(arguments):
-    """Build deterministic prism strips centered on an open sketch path."""
+    """Build solid from offset closed regions when present; otherwise prism strips on centerline."""
     sketch = arguments["sketch"]
+    if sketch.get("regions"):
+        return _sketch_region_extrude(arguments)
     primitives = [item for item in sketch["primitives"] if not item.get("construction")]
     if not primitives:
         raise RuntimeError("Thin-wall centerline path is empty")
@@ -375,7 +365,6 @@ def _centerline_thinwall_extrude(arguments):
     return _fuse(*solids)
 
 
-# 根据静态操作类型分派到具体几何算子。
 def _body(operation):
     p = operation.arguments
     if operation.operator == "sketch.region_extrude":
@@ -426,7 +415,6 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-# CAD Worker 主入口：执行完整计划并输出 STEP、STL、诊断和语义映射。
 def execute_plan(plan: CanonicalPlan, output_root: Path, public_prefix: str = "/artifacts") -> CompileResult:
     diagnostics = list(plan.diagnostics)
     if any(item.severity == "error" for item in diagnostics):

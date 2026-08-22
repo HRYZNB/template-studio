@@ -1,4 +1,4 @@
-﻿# RuiWare MCP
+# RuiWare MCP
 
 本地 MCP 服务将外部工程助手接入 RuiWare 模板 API，平台本身不再配置或调用任何大模型。
 
