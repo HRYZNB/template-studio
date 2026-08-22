@@ -3348,6 +3348,75 @@ code {
   background: #f7f9fa;
   margin-bottom: 9px;
 }
+.thinwall-offset-panel {
+  margin-top: 12px;
+  padding: 0;
+  border: 1px solid #dce3e7;
+  border-radius: 8px;
+  background: #f7f9fa;
+  overflow: hidden;
+}
+.thinwall-offset-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.thinwall-offset-summary::-webkit-details-marker {
+  display: none;
+}
+.thinwall-offset-summary > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.thinwall-offset-summary strong {
+  font-size: 12px;
+}
+.thinwall-offset-summary span,
+.thinwall-offset-hint,
+.thinwall-offset-actions small,
+.thinwall-offset-note {
+  color: #5f6b74;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.thinwall-offset-summary > svg {
+  flex-shrink: 0;
+  color: #7e8a94;
+  transition: transform 0.15s ease;
+}
+.thinwall-offset-panel[open] > .thinwall-offset-summary > svg {
+  transform: rotate(180deg);
+}
+.thinwall-offset-body {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 12px;
+  border-top: 1px solid #e4eaee;
+  padding-top: 10px;
+}
+.thinwall-offset-hint {
+  margin: 0;
+}
+.thinwall-offset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.thinwall-offset-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.thinwall-offset-note {
+  margin: 0;
+}
 .region-guidance > div {
   display: flex;
   flex-direction: column;

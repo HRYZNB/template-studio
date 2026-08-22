@@ -328,8 +328,10 @@ def _sheet_single_bend(arguments):
 
 
 def _centerline_thinwall_extrude(arguments):
-    """Build deterministic prism strips centered on an open sketch path."""
+    """Build solid from offset closed regions when present; otherwise prism strips on centerline."""
     sketch = arguments["sketch"]
+    if sketch.get("regions"):
+        return _sketch_region_extrude(arguments)
     primitives = [item for item in sketch["primitives"] if not item.get("construction")]
     if not primitives:
         raise RuntimeError("Thin-wall centerline path is empty")

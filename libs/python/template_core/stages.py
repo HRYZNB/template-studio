@@ -119,7 +119,11 @@ def validate_base_sketch(draft: TemplateDraft) -> StageValidation:
     semantic_entities_ok = bool(entity_ids) and all(item.role and set(item.parameterRefs) <= known_parameters for item in draft.sketch.entities)
     constraints_ok = bool(draft.sketch.constraints) and all(set(item.entityRefs) <= entity_ids for item in draft.sketch.constraints)
     regions_ok = (
-        bool([item for item in draft.sketch.entities if not item.construction])
+        (
+            bool(draft.sketch.regions)
+            and all(item.closed and set(item.boundaryRefs) <= entity_ids for item in draft.sketch.regions)
+        )
+        or bool([item for item in draft.sketch.entities if not item.construction])
         if draft.sketch.profileMode == "centerlineThinWall"
         else bool(draft.sketch.regions) and all(item.closed and set(item.boundaryRefs) <= entity_ids for item in draft.sketch.regions)
     )

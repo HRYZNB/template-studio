@@ -140,7 +140,6 @@ const SOURCE_LABELS: Record<ParameterSource["type"], string> = {
 };
 const OPERATORS = [
   ["sketch.region_extrude", "参数化草图区域拉伸", "available"],
-  ["sketch.centerline_thinwall_extrude", "中心线＋厚度薄壁拉伸", "available"],
   ["sheet.blank_extrude", "板坯拉伸", "available"],
   ["profile.rectangular_tube_extrude", "矩形管拉伸", "available"],
   ["solid.revolve", "旋转体", "available"],
@@ -156,7 +155,6 @@ const operatorDefaults = (operator: string): Pick<GeometryRecipe["operations"][n
   if (operator === "solid.sweep") return { sourceRefs:["sketch.section.main","path.main"], arguments:{pathPoints:"0:0:0;0:0:length"}, argumentExpressions:{} };
   if (operator === "solid.loft") return { sourceRefs:["sketch.section.main"], arguments:{stations:"0:1;length:0.75"}, argumentExpressions:{} };
   if (operator === "sheet.bend") return { sourceRefs:[], arguments:{bendAngleDegrees:90,kFactor:0.42}, argumentExpressions:{length:"length",width:"sectionWidth",thickness:"thickness",bendPosition:"length * 0.6",insideRadius:"thickness"} };
-  if (operator === "sketch.centerline_thinwall_extrude") return {sourceRefs:["sketch.section.main"],arguments:{},argumentExpressions:{length:"length",thickness:"thickness"}};
   return {sourceRefs:["sketch.section.main"],arguments:{},argumentExpressions:{length:"length"}};
 };
 
@@ -590,16 +588,16 @@ const measureDimensionValue = (
   ) {
     const dx = entity.end[0] - entity.start[0],
       dy = entity.end[1] - entity.start[1];
-    if (constraint.constraintType === "distanceX") return Math.round(Math.abs(dx) * 10) / 10;
-    if (constraint.constraintType === "distanceY") return Math.round(Math.abs(dy) * 10) / 10;
-    return Math.round(Math.hypot(dx, dy) * 10) / 10;
+    if (constraint.constraintType === "distanceX") return Math.round(Math.abs(dx) * 100) / 100;
+    if (constraint.constraintType === "distanceY") return Math.round(Math.abs(dy) * 100) / 100;
+    return Math.round(Math.hypot(dx, dy) * 100) / 100;
   }
   if (
     (constraint.constraintType === "radius" ||
       constraint.constraintType === "diameter") &&
     entity.radius != null
   ) {
-    const radius = Math.round(Math.abs(entity.radius) * 10) / 10;
+    const radius = Math.round(Math.abs(entity.radius) * 100) / 100;
     return constraint.constraintType === "diameter" ? radius * 2 : radius;
   }
   if (constraint.constraintType === "angle" && entity.start && entity.end) {
@@ -607,7 +605,7 @@ const measureDimensionValue = (
       (Math.atan2(entity.end[1] - entity.start[1], entity.end[0] - entity.start[0]) *
         180) /
       Math.PI;
-    return Math.round(degrees * 10) / 10;
+    return Math.round(degrees * 100) / 100;
   }
   return null;
 };
@@ -856,7 +854,7 @@ const propagateCoincidentMove = (
   const seen = new Set<string>();
   while (queue.length) {
     const current = queue.shift()!;
-    const key = `${current.entityId}:${current.handle}:${current.point[0].toFixed(4)},${current.point[1].toFixed(4)}`;
+    const key = `${current.entityId}:${current.handle}:${current.point[0].toFixed(2)},${current.point[1].toFixed(2)}`;
     if (seen.has(key)) continue;
     seen.add(key);
     const entity = byId.get(current.entityId);
@@ -1112,8 +1110,8 @@ const linePolar = (
     length = Math.hypot(dx, dy);
   const angleDegrees = normalizeDegrees((Math.atan2(dy, dx) * 180) / Math.PI);
   return {
-    length: Math.round(length * 10) / 10,
-    angleDegrees: Math.round(angleDegrees * 10) / 10,
+    length: Math.round(length * 100) / 100,
+    angleDegrees: Math.round(angleDegrees * 100) / 100,
   };
 };
 
@@ -1125,9 +1123,471 @@ const endFromLengthAndAngle = (
   const safeLength = Math.max(0, length);
   const radians = (normalizeDegrees(angleDegrees) * Math.PI) / 180;
   return [
-    Math.round((start[0] + safeLength * Math.cos(radians)) * 10) / 10,
-    Math.round((start[1] + safeLength * Math.sin(radians)) * 10) / 10,
+    Math.round((start[0] + safeLength * Math.cos(radians)) * 100) / 100,
+    Math.round((start[1] + safeLength * Math.sin(radians)) * 100) / 100,
   ];
+};
+
+const SKETCH_COORD_EPS = 1e-3;
+const roundSketchCoord = (value: number) => Math.round(value * 100) / 100;
+const roundSketchPoint = (point: [number, number]): [number, number] => [
+  roundSketchCoord(point[0]),
+  roundSketchCoord(point[1]),
+];
+const normalizeSketchEntityNumbers = (
+  entity: Draft["sketch"]["entities"][number],
+): Draft["sketch"]["entities"][number] => ({
+  ...entity,
+  start: entity.start ? roundSketchPoint(entity.start) : null,
+  end: entity.end ? roundSketchPoint(entity.end) : null,
+  center: entity.center ? roundSketchPoint(entity.center) : null,
+  radius: entity.radius == null ? null : roundSketchCoord(entity.radius),
+  startAngle:
+    entity.startAngle == null ? null : roundSketchCoord(entity.startAngle),
+  endAngle: entity.endAngle == null ? null : roundSketchCoord(entity.endAngle),
+  points: entity.points.map((point) => roundSketchPoint(point)),
+});
+const normalizeSketchNumbers = (sketch: Draft["sketch"]): Draft["sketch"] => ({
+  ...sketch,
+  entities: sketch.entities.map(normalizeSketchEntityNumbers),
+  constraints: sketch.constraints.map((constraint) => ({
+    ...constraint,
+    value:
+      constraint.value == null ? null : roundSketchCoord(constraint.value),
+  })),
+});
+const pointsNear = (
+  a: [number, number] | null | undefined,
+  b: [number, number] | null | undefined,
+  eps = SKETCH_COORD_EPS,
+) => !!a && !!b && Math.hypot(a[0] - b[0], a[1] - b[1]) < eps;
+
+const isThinwallOffsetEntity = (
+  entity: Draft["sketch"]["entities"][number],
+) =>
+  entity.id.startsWith("thinwall.offset.") ||
+  entity.role.startsWith("section.thinwall.");
+
+const lineLineIntersection = (
+  a0: [number, number],
+  a1: [number, number],
+  b0: [number, number],
+  b1: [number, number],
+): [number, number] | null => {
+  const dax = a1[0] - a0[0],
+    day = a1[1] - a0[1],
+    dbx = b1[0] - b0[0],
+    dby = b1[1] - b0[1],
+    denom = dax * dby - day * dbx;
+  if (Math.abs(denom) < 1e-12) return null;
+  const t = ((b0[0] - a0[0]) * dby - (b0[1] - a0[1]) * dbx) / denom;
+  return [a0[0] + t * dax, a0[1] + t * day];
+};
+
+const offsetLineSegment = (
+  start: [number, number],
+  end: [number, number],
+  distance: number,
+  side: 1 | -1,
+): { start: [number, number]; end: [number, number] } | null => {
+  const dx = end[0] - start[0],
+    dy = end[1] - start[1],
+    length = Math.hypot(dx, dy);
+  if (length < SKETCH_COORD_EPS) return null;
+  const nx = (-dy / length) * side * distance,
+    ny = (dx / length) * side * distance;
+  return {
+    start: roundSketchPoint([start[0] + nx, start[1] + ny]),
+    end: roundSketchPoint([end[0] + nx, end[1] + ny]),
+  };
+};
+
+/** Join consecutive same-side offset segments by extending/trimming to intersections. */
+const joinOffsetSegments = (
+  segments: { start: [number, number]; end: [number, number] }[],
+) => {
+  const next = segments.map((item) => ({
+    start: [...item.start] as [number, number],
+    end: [...item.end] as [number, number],
+  }));
+  for (let index = 0; index < next.length - 1; index += 1) {
+    const current = next[index],
+      following = next[index + 1];
+    const hit = lineLineIntersection(
+      current.start,
+      current.end,
+      following.start,
+      following.end,
+    );
+    if (hit) {
+      const point = roundSketchPoint(hit);
+      current.end = point;
+      following.start = point;
+    } else {
+      const mid = roundSketchPoint([
+        (current.end[0] + following.start[0]) / 2,
+        (current.end[1] + following.start[1]) / 2,
+      ]);
+      current.end = mid;
+      following.start = mid;
+    }
+  }
+  return next;
+};
+
+type CenterlineChainSegment = {
+  id: string;
+  start: [number, number];
+  end: [number, number];
+};
+
+/** Walk centerline lines into open polylines using geometric endpoint connectivity. */
+const buildCenterlineChains = (
+  entities: Draft["sketch"]["entities"],
+): CenterlineChainSegment[][] => {
+  const lines = entities.filter(
+    (item) =>
+      !isThinwallOffsetEntity(item) &&
+      item.geometryType === "line" &&
+      item.start &&
+      item.end &&
+      Math.hypot(item.end[0] - item.start[0], item.end[1] - item.start[1]) >
+        SKETCH_COORD_EPS,
+  ) as Array<
+    Draft["sketch"]["entities"][number] & {
+      start: [number, number];
+      end: [number, number];
+    }
+  >;
+  if (!lines.length) return [];
+  const adjacency = new Map<string, string[]>();
+  const touch = (
+    a: (typeof lines)[number],
+    b: (typeof lines)[number],
+  ): boolean =>
+    pointsNear(a.start, b.start) ||
+    pointsNear(a.start, b.end) ||
+    pointsNear(a.end, b.start) ||
+    pointsNear(a.end, b.end);
+  for (const line of lines) adjacency.set(line.id, []);
+  for (let i = 0; i < lines.length; i += 1) {
+    for (let j = i + 1; j < lines.length; j += 1) {
+      if (!touch(lines[i], lines[j])) continue;
+      adjacency.get(lines[i].id)!.push(lines[j].id);
+      adjacency.get(lines[j].id)!.push(lines[i].id);
+    }
+  }
+  const byId = new Map(lines.map((item) => [item.id, item]));
+  const used = new Set<string>();
+  const chains: CenterlineChainSegment[][] = [];
+  const orientedNext = (
+    current: CenterlineChainSegment,
+    candidateId: string,
+  ): CenterlineChainSegment | null => {
+    const candidate = byId.get(candidateId);
+    if (!candidate) return null;
+    if (pointsNear(current.end, candidate.start))
+      return {
+        id: candidate.id,
+        start: [...candidate.start] as [number, number],
+        end: [...candidate.end] as [number, number],
+      };
+    if (pointsNear(current.end, candidate.end))
+      return {
+        id: candidate.id,
+        start: [...candidate.end] as [number, number],
+        end: [...candidate.start] as [number, number],
+      };
+    return null;
+  };
+  const grow = (seedId: string) => {
+    const seed = byId.get(seedId);
+    if (!seed || used.has(seedId)) return;
+    let head: CenterlineChainSegment = {
+      id: seed.id,
+      start: [...seed.start] as [number, number],
+      end: [...seed.end] as [number, number],
+    };
+    used.add(seed.id);
+    const forward: CenterlineChainSegment[] = [head];
+    while (true) {
+      const tip = forward[forward.length - 1];
+      const nextId = (adjacency.get(tip.id) || []).find(
+        (id) => !used.has(id) && orientedNext(tip, id),
+      );
+      if (!nextId) break;
+      const oriented = orientedNext(tip, nextId)!;
+      used.add(oriented.id);
+      forward.push(oriented);
+    }
+    // Grow backward from the seed start so open ends become chain terminals.
+    while (true) {
+      const tip = forward[0];
+      const reversedTip: CenterlineChainSegment = {
+        id: tip.id,
+        start: tip.end,
+        end: tip.start,
+      };
+      const prevId = (adjacency.get(tip.id) || []).find((id) => {
+        if (used.has(id)) return false;
+        return !!orientedNext(reversedTip, id);
+      });
+      if (!prevId) break;
+      const oriented = orientedNext(reversedTip, prevId)!;
+      used.add(oriented.id);
+      forward.unshift({
+        id: oriented.id,
+        start: oriented.end,
+        end: oriented.start,
+      });
+    }
+    chains.push(forward);
+  };
+  const endpoints = lines
+    .filter((item) => (adjacency.get(item.id) || []).length <= 1)
+    .map((item) => item.id);
+  for (const id of endpoints.length ? endpoints : lines.map((item) => item.id))
+    grow(id);
+  for (const line of lines) grow(line.id);
+  return chains;
+};
+
+const makeSketchLineEntity = (
+  id: string,
+  role: string,
+  start: [number, number],
+  end: [number, number],
+  construction = false,
+): Draft["sketch"]["entities"][number] => ({
+  id,
+  role,
+  geometryType: "line",
+  parameterRefs: [],
+  construction,
+  start: roundSketchPoint(start),
+  end: roundSketchPoint(end),
+  center: null,
+  radius: null,
+  startAngle: null,
+  endAngle: null,
+  points: [],
+});
+
+/**
+ * Bilateral centerline offset with miter joins at connected vertices and
+ * straight end caps on free terminals. Original centerlines become construction.
+ */
+const applyCenterlineThinwallOffset = (
+  sketch: Draft["sketch"],
+  distance1: number,
+  distance2: number,
+): { sketch: Draft["sketch"]; message?: string } => {
+  const d1 = Math.max(0, distance1),
+    d2 = Math.max(0, distance2);
+  if (d1 <= 0 && d2 <= 0) {
+    return { sketch, message: "偏移距离 1 与偏移距离 2 不能同时为 0。" };
+  }
+  const chains = buildCenterlineChains(sketch.entities);
+  if (!chains.length) {
+    return {
+      sketch,
+      message: "未找到可偏移的中心线直线段（请先绘制相连的中心线）。",
+    };
+  }
+  const stamp = Date.now().toString(36);
+  const offsetEntities: Draft["sketch"]["entities"] = [];
+  const offsetConstraints: Draft["sketch"]["constraints"] = [];
+  const regions: Draft["sketch"]["regions"] = [];
+  let segmentIndex = 0;
+  let constraintIndex = 0;
+  const pushConstraint = (
+    constraintType: Draft["sketch"]["constraints"][number]["constraintType"],
+    entityRefs: string[],
+    label: string,
+    endpointRefs: Array<"start" | "end"> = [],
+  ) => {
+    constraintIndex += 1;
+    offsetConstraints.push({
+      id: `constraint.thinwall.${stamp}.${constraintIndex}`,
+      label,
+      constraintType,
+      entityRefs,
+      endpointRefs,
+      expression: null,
+      parameterId: null,
+      value: null,
+      driverMode: null,
+      enabled: true,
+      driving: true,
+    });
+  };
+  const pushLine = (
+    roleSuffix: string,
+    start: [number, number],
+    end: [number, number],
+  ) => {
+    segmentIndex += 1;
+    const id = `thinwall.offset.${stamp}.${segmentIndex}`;
+    const entity = makeSketchLineEntity(
+      id,
+      `section.thinwall.${roleSuffix}`,
+      start,
+      end,
+      false,
+    );
+    offsetEntities.push(entity);
+    return entity.id;
+  };
+  for (const [chainIndex, chain] of chains.entries()) {
+    const side1Raw = chain
+      .map((item) => offsetLineSegment(item.start, item.end, d1 || 0, 1))
+      .filter(
+        (item): item is { start: [number, number]; end: [number, number] } =>
+          !!item,
+      );
+    const side2Raw = chain
+      .map((item) => offsetLineSegment(item.start, item.end, d2 || 0, -1))
+      .filter(
+        (item): item is { start: [number, number]; end: [number, number] } =>
+          !!item,
+      );
+    if (!side1Raw.length || !side2Raw.length) continue;
+    // Zero distance collapses that side onto the centerline; still join for caps.
+    const side1 = joinOffsetSegments(
+      side1Raw.map((item, index) =>
+        d1 > 0
+          ? item
+          : {
+              start: [...chain[index].start] as [number, number],
+              end: [...chain[index].end] as [number, number],
+            },
+      ),
+    );
+    const side2 = joinOffsetSegments(
+      side2Raw.map((item, index) =>
+        d2 > 0
+          ? item
+          : {
+              start: [...chain[index].start] as [number, number],
+              end: [...chain[index].end] as [number, number],
+            },
+      ),
+    );
+    const chainClosed = pointsNear(
+      chain[0].start,
+      chain[chain.length - 1].end,
+    );
+    if (chainClosed && side1.length > 1) {
+      const hit1 = lineLineIntersection(
+        side1[side1.length - 1].start,
+        side1[side1.length - 1].end,
+        side1[0].start,
+        side1[0].end,
+      );
+      if (hit1) {
+        const point = roundSketchPoint(hit1);
+        side1[side1.length - 1].end = point;
+        side1[0].start = point;
+      }
+      const hit2 = lineLineIntersection(
+        side2[side2.length - 1].start,
+        side2[side2.length - 1].end,
+        side2[0].start,
+        side2[0].end,
+      );
+      if (hit2) {
+        const point = roundSketchPoint(hit2);
+        side2[side2.length - 1].end = point;
+        side2[0].start = point;
+      }
+    }
+    const boundaryRefs: string[] = [];
+    const side1Ids: string[] = [];
+    const side2Ids: string[] = [];
+    for (let index = 0; index < side1.length; index += 1) {
+      const id = pushLine(
+        `side1.${chainIndex + 1}.${index + 1}`,
+        side1[index].start,
+        side1[index].end,
+      );
+      side1Ids.push(id);
+      boundaryRefs.push(id);
+      // Offset wall stays parallel to its source centerline.
+      pushConstraint(
+        "parallel",
+        [id, chain[index].id],
+        `薄壁平行 侧1-${chainIndex + 1}.${index + 1}`,
+      );
+    }
+    if (!chainClosed) {
+      boundaryRefs.push(
+        pushLine(`cap.end.${chainIndex + 1}`, side1[side1.length - 1].end, side2[side2.length - 1].end),
+      );
+    }
+    for (let index = side2.length - 1; index >= 0; index -= 1) {
+      const id = pushLine(
+        `side2.${chainIndex + 1}.${index + 1}`,
+        side2[index].end,
+        side2[index].start,
+      );
+      side2Ids[index] = id;
+      boundaryRefs.push(id);
+    }
+    for (let index = 0; index < side2Ids.length; index += 1) {
+      pushConstraint(
+        "parallel",
+        [side2Ids[index], chain[index].id],
+        `薄壁平行 侧2-${chainIndex + 1}.${index + 1}`,
+      );
+    }
+    if (!chainClosed) {
+      boundaryRefs.push(
+        pushLine(`cap.start.${chainIndex + 1}`, side2[0].start, side1[0].start),
+      );
+    }
+    // Connected endpoints along the closed thin-wall loop (including caps).
+    for (let index = 0; index < boundaryRefs.length; index += 1) {
+      const a = boundaryRefs[index],
+        b = boundaryRefs[(index + 1) % boundaryRefs.length];
+      pushConstraint(
+        "coincident",
+        [a, b],
+        `薄壁首尾相连 ${chainIndex + 1}.${index + 1}`,
+        ["end", "start"],
+      );
+    }
+    regions.push({
+      id: `section.region.thinwall.${chainIndex + 1}`,
+      boundaryRefs,
+      closed: true,
+      role: "section.materialRegion",
+      operation: "add",
+    });
+  }
+  if (!offsetEntities.length) {
+    return { sketch, message: "偏移失败：中心线段退化或距离无效。" };
+  }
+  const keptEntities = sketch.entities
+    .filter((item) => !isThinwallOffsetEntity(item))
+    .map((item) =>
+      item.geometryType === "line" && item.start && item.end
+        ? { ...item, construction: true }
+        : item,
+    );
+  const keptConstraints = sketch.constraints.filter(
+    (item) =>
+      !item.id.startsWith("constraint.thinwall.") &&
+      item.entityRefs.every((ref) => !ref.startsWith("thinwall.offset.")),
+  );
+  return {
+    sketch: {
+      ...sketch,
+      entities: [...keptEntities, ...offsetEntities],
+      constraints: [...keptConstraints, ...offsetConstraints],
+      regions,
+      constraintsReviewed: false,
+    },
+  };
 };
 
 const commitSharedParameterUpdate = (
@@ -1197,7 +1657,7 @@ function ParametricSketchCanvas({
   caseName: "minimum" | "nominal" | "maximum";
   selected: string[];
   tool: SketchTool;
-  onSelect: (id: string, additive?: boolean) => void;
+  onSelect: (id: string | string[], additive?: boolean) => void;
   onSketch: (sketch: Draft["sketch"]) => void;
   onGeometryEdit: (patch: {
     sketch: Draft["sketch"];
@@ -1222,6 +1682,12 @@ function ParametricSketchCanvas({
     pointerId: number;
     hasMoved: boolean;
     duplicate: boolean;
+    /** Copy entity ids being dragged (Alt-drag); empty when not duplicating. */
+    duplicateIds: string[];
+    /** Original → copy id map for multi Alt-drag constraint remapping. */
+    duplicateIdMap: Record<string, string>;
+    /** Entity ids translated together (multi-select move or single). */
+    moveIds: string[];
   } | null>(null);
   const [dragTick, setDragTick] = useState(0);
   const [viewRevision, setViewRevision] = useState(0);
@@ -1254,6 +1720,9 @@ function ParametricSketchCanvas({
     if (!settlePrimitives) return;
     setSettlePrimitives(null);
   }, [draft.sketch.entities]);
+  useEffect(() => {
+    setPending([]);
+  }, [tool]);
   const viewportKey = `${draft.id}|${draft.sketch.profileMode}|${draft.sketch.entities.map((item) => item.id).join("|")}`;
   const initialViewport = () => {
     const xs: number[] = [],
@@ -1345,13 +1814,13 @@ function ParametricSketchCanvas({
       x:
         Math.round(
           ((((clientX - rect.left) * 460) / rect.width - math.cx) / math.scale) *
-            10,
-        ) / 10,
+            100,
+        ) / 100,
       y:
         Math.round(
           ((math.cy - ((clientY - rect.top) * 330) / rect.height) / math.scale) *
-            10,
-        ) / 10,
+            100,
+        ) / 100,
     };
   };
   const world = (event: { clientX: number; clientY: number; currentTarget: EventTarget }) => {
@@ -1552,28 +2021,60 @@ function ParametricSketchCanvas({
     const source = snapshot.find((item) => item.id === id);
     if (!source) return;
     const duplicate = event.altKey;
+    const multiSelected =
+      selected.includes(id) &&
+      selected.filter((itemId) =>
+        snapshot.some((entity) => entity.id === itemId),
+      ).length > 1;
+    const groupSourceIds = multiSelected
+      ? selected.filter((itemId) =>
+          snapshot.some((entity) => entity.id === itemId),
+        )
+      : [id];
+    const sourceIds = duplicate ? groupSourceIds : [];
+    // Multi-select move/copy always translates whole entities together.
+    const effectiveHandle =
+      (duplicate && sourceIds.length > 1) || (!duplicate && multiSelected)
+        ? ("body" as const)
+        : handle;
     let dragId = id;
     let entity = { ...source };
+    const duplicateIdMap: Record<string, string> = {};
+    const duplicateIds: string[] = [];
     if (duplicate) {
-      dragId = uid(`${id}.copy`);
-      entity = {
-        ...cloneSketchEntities([source])[0],
-        id: dragId,
-        role: `${source.role}.copy`,
-      };
-      snapshot = [...snapshot, entity];
+      const copies: Draft["sketch"]["entities"] = [];
+      for (const sourceId of sourceIds) {
+        const original = snapshot.find((item) => item.id === sourceId);
+        if (!original) continue;
+        const copyId = uid(`${sourceId}.copy`);
+        duplicateIdMap[sourceId] = copyId;
+        copies.push({
+          ...cloneSketchEntities([original])[0],
+          id: copyId,
+          role: `${original.role}.copy`,
+        });
+      }
+      if (!copies.length) return;
+      dragId = duplicateIdMap[id] || copies[0].id;
+      entity = copies.find((item) => item.id === dragId) || copies[0];
+      duplicateIds.push(...copies.map((item) => item.id));
+      snapshot = [...snapshot, ...copies];
     }
+    const moveIds = duplicate ? duplicateIds : groupSourceIds;
     setSettlePrimitives(null);
     dragEntitiesRef.current = snapshot;
     const nextDrag = {
       id: dragId,
-      handle,
+      handle: effectiveHandle,
       origin: world(event),
       entity,
       beforeEntities: snapshot,
       pointerId: event.pointerId,
       hasMoved: false,
       duplicate,
+      duplicateIds,
+      duplicateIdMap,
+      moveIds,
     };
     dragRef.current = nextDrag;
     setDrag(nextDrag);
@@ -1591,6 +2092,8 @@ function ParametricSketchCanvas({
       dy,
       event.shiftKey || orthogonalLock,
     ));
+    dx = Math.round(dx * 100) / 100;
+    dy = Math.round(dy * 100) / 100;
     if (!active.hasMoved) {
       if (Math.hypot(dx, dy) < DRAG_MOVE_THRESHOLD) {
         // Keep the pressed preview identical to the pre-drag geometry.
@@ -1606,31 +2109,49 @@ function ParametricSketchCanvas({
       value: [number, number] | null | undefined,
     ): [number, number] | null =>
       value ? [value[0] + dx, value[1] + dy] : null;
-    const translateWhole = active.handle === "center" || active.handle === "body";
+    const translateWhole =
+      active.handle === "center" || active.handle === "body";
+    const movingIds = new Set(
+      active.moveIds.length ? active.moveIds : [active.id],
+    );
+    const rigidGroup = movingIds.size > 1;
     const local = active.beforeEntities.map((item) => {
-      if (item.id !== active.id) return item;
-      if (translateWhole) {
+      if (!movingIds.has(item.id)) return item;
+      if (rigidGroup || (active.duplicate && translateWhole)) {
         return {
           ...item,
-          center: shift(source.center),
-          start: shift(source.start),
-          end: shift(source.end),
-          points: source.points.map(
+          center: shift(item.center),
+          start: shift(item.start),
+          end: shift(item.end),
+          points: item.points.map(
+            ([x, y]) => [x + dx, y + dy] as [number, number],
+          ),
+        };
+      }
+      if (translateWhole) {
+        const base = active.duplicate ? item : source;
+        return {
+          ...item,
+          center: shift(base.center),
+          start: shift(base.start),
+          end: shift(base.end),
+          points: base.points.map(
             ([x, y]) => [x + dx, y + dy] as [number, number],
           ),
         };
       }
       const endpoint = shift(
         active.handle === "start" || active.handle === "end"
-          ? source[active.handle]
+          ? (active.duplicate ? item : source)[active.handle]
           : null,
       );
       if (!endpoint) return item;
-      if (item.geometryType === "arc" && source.center) {
+      const pivot = active.duplicate ? item : source;
+      if (item.geometryType === "arc" && pivot.center) {
         const angle =
           (Math.atan2(
-            endpoint[1] - source.center[1],
-            endpoint[0] - source.center[0],
+            endpoint[1] - pivot.center[1],
+            endpoint[0] - pivot.center[0],
           ) *
             180) /
           Math.PI;
@@ -1642,8 +2163,8 @@ function ParametricSketchCanvas({
       }
       return { ...item, [active.handle]: endpoint };
     });
-    if (active.duplicate) {
-      // Alt-drag copies stay independent of the source topology while previewing.
+    if (active.duplicate || rigidGroup) {
+      // Group translate (move or Alt-copy) keeps relative topology among moved entities.
       dragEntitiesRef.current = local;
     } else {
       const propagated = propagateCoincidentMove(
@@ -1700,16 +2221,72 @@ function ParametricSketchCanvas({
       return;
     }
     if (active.duplicate) {
+      const idMap = active.duplicateIdMap;
+      const copiedConstraints = draft.sketch.constraints
+        .filter(
+          (constraint) =>
+            constraint.entityRefs.length > 0 &&
+            constraint.entityRefs.every((ref) => idMap[ref]),
+        )
+        .map((constraint) => ({
+          ...constraint,
+          id: uid(`${constraint.id}.copy`),
+          entityRefs: constraint.entityRefs.map((ref) => idMap[ref]),
+          endpointRefs: constraint.endpointRefs
+            ? [...constraint.endpointRefs]
+            : constraint.endpointRefs,
+          label: constraint.label ? `${constraint.label} 副本` : constraint.label,
+        }));
+      const copiedRegions = draft.sketch.regions
+        .filter(
+          (region) =>
+            region.boundaryRefs.length > 0 &&
+            region.boundaryRefs.every((ref) => idMap[ref]),
+        )
+        .map((region) => ({
+          ...region,
+          id: uid(`${region.id}.copy`),
+          boundaryRefs: region.boundaryRefs.map((ref) => idMap[ref]),
+          role: `${region.role}.copy`,
+        }));
       setSettlePrimitives(entitiesToPrimitives(afterEntities));
       beginEdit();
       onGeometryEdit({
         sketch: {
           ...draft.sketch,
           entities: afterEntities,
+          constraints: [...draft.sketch.constraints, ...copiedConstraints],
+          regions: [...draft.sketch.regions, ...copiedRegions],
           constraintsReviewed: false,
         },
       });
-      onSelect(active.id);
+      onSelect(
+        active.duplicateIds.length ? active.duplicateIds : [active.id],
+      );
+      clearDragState();
+      return;
+    }
+    if (active.moveIds.length > 1) {
+      let entities = afterEntities;
+      for (const moveId of active.moveIds) {
+        const propagated = propagateCoincidentMove(
+          draft.sketch.constraints,
+          entities,
+          moveId,
+          "center",
+          active.beforeEntities,
+        );
+        entities = propagated.entities;
+      }
+      setSettlePrimitives(entitiesToPrimitives(entities));
+      beginEdit();
+      onGeometryEdit({
+        sketch: {
+          ...draft.sketch,
+          entities,
+          constraintsReviewed: false,
+        },
+      });
       clearDragState();
       return;
     }
@@ -1760,11 +2337,21 @@ function ParametricSketchCanvas({
           cx={p.x}
           cy={p.y}
           r={active ? 6 : 4}
-          onPointerDown={(event) =>
-            active && selected.length === 1 && caseName === "nominal"
-              ? startDrag(event, primitive.id, "start")
-              : select(event)
-          }
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            if (
+              tool === "select" &&
+              caseName === "nominal" &&
+              !pendingConflict &&
+              active &&
+              !event.shiftKey &&
+              !event.ctrlKey
+            ) {
+              startDrag(event, primitive.id, "start");
+              return;
+            }
+            select(event);
+          }}
         />
       );
     }
@@ -1775,16 +2362,20 @@ function ParametricSketchCanvas({
         event.stopPropagation();
         if (tool !== "select" || caseName !== "nominal" || pendingConflict)
           return;
+        if (event.shiftKey || event.ctrlKey) {
+          onSelect(primitive.id, true);
+          return;
+        }
         if (event.altKey) {
           if (!selected.includes(primitive.id)) onSelect(primitive.id);
           startDrag(event, primitive.id, "body");
           return;
         }
-        if (active && selected.length === 1) {
+        if (active) {
           startDrag(event, primitive.id, "body");
           return;
         }
-        onSelect(primitive.id, event.shiftKey || event.ctrlKey);
+        onSelect(primitive.id);
       };
       return (
         <g
@@ -1817,11 +2408,32 @@ function ParametricSketchCanvas({
     }
     if (primitive.type === "circle" && primitive.center) {
       const c = screen(primitive.center);
+      const beginCircleDrag = (event: React.PointerEvent) => {
+        event.stopPropagation();
+        if (tool !== "select" || caseName !== "nominal" || pendingConflict) {
+          select(event);
+          return;
+        }
+        if (event.shiftKey || event.ctrlKey) {
+          onSelect(primitive.id, true);
+          return;
+        }
+        if (event.altKey) {
+          if (!selected.includes(primitive.id)) onSelect(primitive.id);
+          startDrag(event, primitive.id, "center");
+          return;
+        }
+        if (active) {
+          startDrag(event, primitive.id, "center");
+          return;
+        }
+        select(event);
+      };
       return (
         <g
           key={primitive.id}
           className={`solver-segment ${active ? "selected" : ""} ${primitive.construction ? "construction" : ""}`}
-          onPointerDown={select}
+          onPointerDown={beginCircleDrag}
         >
           <circle
             className="curve-hit-target"
@@ -1864,8 +2476,29 @@ function ParametricSketchCanvas({
             ? 1
             : 0;
       const c = screen(primitive.center);
+      const beginArcDrag = (event: React.PointerEvent) => {
+        event.stopPropagation();
+        if (tool !== "select" || caseName !== "nominal" || pendingConflict) {
+          select(event);
+          return;
+        }
+        if (event.shiftKey || event.ctrlKey) {
+          onSelect(primitive.id, true);
+          return;
+        }
+        if (event.altKey) {
+          if (!selected.includes(primitive.id)) onSelect(primitive.id);
+          startDrag(event, primitive.id, "center");
+          return;
+        }
+        if (active) {
+          startDrag(event, primitive.id, "center");
+          return;
+        }
+        select(event);
+      };
       return (
-        <g key={primitive.id} onPointerDown={select}>
+        <g key={primitive.id} onPointerDown={beginArcDrag}>
           <path
             className="curve-hit-target"
             d={`M${a.x},${a.y} A${primitive.radius * scale},${primitive.radius * scale} 0 ${large} 0 ${b.x},${b.y}`}
@@ -1990,23 +2623,42 @@ function NumberInput({
   onChange,
   unit = "mm",
   min,
-  step = 1,
+  step = 0.01,
+  precision = 2,
 }: {
   value: number | null | undefined;
   onChange: (v: number) => void;
   unit?: string;
   min?: number;
   step?: number;
+  /** Decimal places for display and commit; sketch defaults to 0.01. */
+  precision?: number;
 }) {
-  const [textValue, setTextValue] = useState(value == null ? "" : String(value));
+  const roundValue = (numeric: number) => {
+    const factor = 10 ** precision;
+    return Math.round(numeric * factor) / factor;
+  };
+  const formatValue = (numeric: number) => roundValue(numeric).toFixed(precision);
+  const [textValue, setTextValue] = useState(
+    value == null || !Number.isFinite(Number(value))
+      ? ""
+      : formatValue(Number(value)),
+  );
   const [focused, setFocused] = useState(false);
   useEffect(() => {
-    if (!focused) setTextValue(value == null ? "" : String(value));
-  }, [value, focused]);
+    if (!focused) {
+      setTextValue(
+        value == null || !Number.isFinite(Number(value))
+          ? ""
+          : formatValue(Number(value)),
+      );
+    }
+  }, [value, focused, precision]);
   const accept = (raw: string) => {
     setTextValue(raw);
     const numeric = Number(raw);
-    if (raw.trim() !== "" && Number.isFinite(numeric)) onChange(numeric);
+    if (raw.trim() !== "" && Number.isFinite(numeric))
+      onChange(roundValue(numeric));
   };
   return (
     <div className="number-wrap">
@@ -2020,8 +2672,17 @@ function NumberInput({
         onBlur={() => {
           setFocused(false);
           const numeric = Number(textValue);
-          if (textValue.trim() === "" || !Number.isFinite(numeric))
-            setTextValue(value == null ? "" : String(value));
+          if (textValue.trim() === "" || !Number.isFinite(numeric)) {
+            setTextValue(
+              value == null || !Number.isFinite(Number(value))
+                ? ""
+                : formatValue(Number(value)),
+            );
+            return;
+          }
+          const rounded = roundValue(numeric);
+          if (rounded !== value) onChange(rounded);
+          setTextValue(formatValue(rounded));
         }}
       />
       <span>{unit}</span>
@@ -2446,7 +3107,7 @@ function SketchIntentEditor({
   draft: Draft;
   solution: SketchSolveResult | null;
   selected: string[];
-  onSelect: (id: string, additive?: boolean) => void;
+  onSelect: (id: string | string[], additive?: boolean) => void;
   setSketch: (patch: Partial<Draft["sketch"]>) => void;
   change: (draft: Draft) => void;
 }) {
@@ -4584,16 +5245,20 @@ function TemplateInfo({
       return;
     }
     const first = draft.geometryRecipe.operations[0];
-    const defaults = operatorDefaults(prototype.operator);
+    const operator =
+      prototype.operator === "sketch.centerline_thinwall_extrude"
+        ? "sketch.region_extrude"
+        : prototype.operator;
+    const defaults = operatorDefaults(operator);
     const operation = first
       ? {
           ...first,
-          operator: prototype.operator,
+          operator,
           ...defaults,
         }
       : {
           id: "body.main",
-          operator: prototype.operator,
+          operator,
           ...defaults,
           conditionExpression: "True",
           semanticOutputs: ["part.body", "part.referenceFrame"],
@@ -5648,6 +6313,13 @@ function GeometryStage({
   );
   const [moveOffset, setMoveOffset] = useState({ horizontal: 10, vertical: 0 });
   const [orthogonalLock, setOrthogonalLock] = useState(false);
+  const [thinwallOffset, setThinwallOffset] = useState({
+    side1: 1,
+    side2: 1,
+  });
+  const [thinwallOffsetNote, setThinwallOffsetNote] = useState<string | null>(
+    null,
+  );
   const [sketchClipboard, setSketchClipboard] = useState<{
     entities: Draft["sketch"]["entities"];
     constraints: Draft["sketch"]["constraints"];
@@ -5659,8 +6331,27 @@ function GeometryStage({
   const [pendingProfileMode, setPendingProfileMode] = useState<
     Draft["sketch"]["profileMode"] | null
   >(null);
+  useEffect(() => {
+    if (draft.sketch.profileMode !== "centerlineThinWall") {
+      setThinwallOffsetNote(null);
+      return;
+    }
+    const thickness = draft.parameterDefinitions.find(
+      (item) => item.id === (semanticParameterIds(draft).thickness || "thickness"),
+    );
+    const raw = Number(thickness?.default);
+    const half =
+      Number.isFinite(raw) && raw > 0
+        ? Math.round((raw / 2) * 100) / 100
+        : 1;
+    setThinwallOffset({ side1: half, side2: half });
+  }, [draft.id, draft.sketch.profileMode]);
   const selectedEntity = selectedEntities[0] || "";
-  const selectEntity = (id: string, additive = false) =>
+  const selectEntity = (id: string | string[], additive = false) => {
+    if (Array.isArray(id)) {
+      setSelectedEntities(id.filter(Boolean));
+      return;
+    }
     setSelectedEntities((items) =>
       !id
         ? []
@@ -5670,6 +6361,7 @@ function GeometryStage({
             : [...items, id]
           : [id],
     );
+  };
   useEffect(() => {
     if (sketchEditConflict) return;
     const requestId = ++solveRequest.current;
@@ -5697,8 +6389,10 @@ function GeometryStage({
     sketchEditConflict,
   ]);
   useEffect(() => {
-    const normalized = normalizeSketchTopology(draft.sketch);
-    if (normalized === draft.sketch) return;
+    const normalized = normalizeSketchNumbers(
+      normalizeSketchTopology(draft.sketch),
+    );
+    if (JSON.stringify(normalized) === JSON.stringify(draft.sketch)) return;
     change({ ...draft, sketch: normalized });
   }, [draft.id]);
   const setRecipe = (patch: Partial<GeometryRecipe>) =>
@@ -5748,11 +6442,13 @@ function GeometryStage({
   const setSketch = (patch: Partial<Draft["sketch"]>) =>
     change({
       ...draft,
-      sketch: normalizeSketchTopology({
-        ...draft.sketch,
-        ...patch,
-        constraintsReviewed: false,
-      }),
+      sketch: normalizeSketchNumbers(
+        normalizeSketchTopology({
+          ...draft.sketch,
+          ...patch,
+          constraintsReviewed: false,
+        }),
+      ),
     });
   const beginSketchEdit = () => {
     setHistory((items) => [...items, draft.sketch].slice(-40));
@@ -5763,7 +6459,7 @@ function GeometryStage({
     change({
       ...draft,
       sketch: {
-        ...normalizeSketchTopology(sketch),
+        ...normalizeSketchNumbers(normalizeSketchTopology(sketch)),
         constraintsReviewed: false,
       },
     });
@@ -5776,7 +6472,7 @@ function GeometryStage({
     change({
       ...draft,
       sketch: {
-        ...normalizeSketchTopology(patch.sketch),
+        ...normalizeSketchNumbers(normalizeSketchTopology(patch.sketch)),
         constraintsReviewed: false,
       },
       ...(patch.parameterDefinitions
@@ -5876,6 +6572,28 @@ function GeometryStage({
     beginSketchEdit();
     applySketch(cleanSketchReferences(draft.sketch, new Set(selectedEntities)));
     setSelectedEntities([]);
+  };
+  const applyThinwallOffset = () => {
+    const result = applyCenterlineThinwallOffset(
+      draft.sketch,
+      thinwallOffset.side1,
+      thinwallOffset.side2,
+    );
+    if (result.message) {
+      setThinwallOffsetNote(result.message);
+      return;
+    }
+    beginSketchEdit();
+    applySketch(result.sketch);
+    setThinwallOffsetNote(
+      `已按两侧 ${thinwallOffset.side1} / ${thinwallOffset.side2} mm 生成薄壁轮廓，并自动添加首尾重合与相对中心线的平行约束。中心线已转为构造线。`,
+    );
+    setSelectedEntities(
+      result.sketch.entities
+        .filter((item) => isThinwallOffsetEntity(item))
+        .map((item) => item.id)
+        .slice(0, 1),
+    );
   };
   const translateEntity = (
     entity: Draft["sketch"]["entities"][number],
@@ -6016,17 +6734,11 @@ function GeometryStage({
             ? operation
             : {
                 ...operation,
-                operator:
-                  pendingProfileMode === "centerlineThinWall"
-                    ? "sketch.centerline_thinwall_extrude"
-                    : "sketch.region_extrude",
+                operator: "sketch.region_extrude",
                 argumentExpressions: {
                   ...operation.argumentExpressions,
                   length:
                     operation.argumentExpressions.length || semanticIds.length,
-                  ...(pendingProfileMode === "centerlineThinWall"
-                    ? { thickness: semanticIds.thickness }
-                    : {}),
                 },
               },
         ),
@@ -6439,7 +7151,7 @@ function GeometryStage({
                 Δ{planeAxes.horizontal}
                 <NumberInput
                   value={moveOffset.horizontal}
-                  step={0.1}
+                  step={0.01}
                   onChange={(horizontal) =>
                     setMoveOffset((value) => ({ ...value, horizontal }))
                   }
@@ -6449,7 +7161,7 @@ function GeometryStage({
                 Δ{planeAxes.vertical}
                 <NumberInput
                   value={moveOffset.vertical}
-                  step={0.1}
+                  step={0.01}
                   onChange={(vertical) =>
                     setMoveOffset((value) => ({ ...value, vertical }))
                   }
@@ -6460,7 +7172,7 @@ function GeometryStage({
             <div className="canvas-selection-note">
               <MousePointer2 size={13} />
               <span>
-                选中直线后可拖动线段整体；端点手柄改端点。Alt+拖动复制，Shift
+                选中后可拖动整体移动（多选一起移）；端点手柄改端点。Alt+拖动复制，Shift
                 或「正交」锁定水平／竖直。Ctrl+C 复制，Ctrl+V 粘贴，Ctrl+Z／Y
                 撤销重做。
               </span>
@@ -6549,8 +7261,8 @@ function GeometryStage({
             />
             <div className="sketch-coordinate-bar" aria-live="polite">
               <span>草图平面 {draft.sketch.plane}</span>
-              <b>{planeAxes.horizontal} {cursorPoint ? cursorPoint.x.toFixed(1) : "—"}</b>
-              <b>{planeAxes.vertical} {cursorPoint ? cursorPoint.y.toFixed(1) : "—"}</b>
+              <b>{planeAxes.horizontal} {cursorPoint ? cursorPoint.x.toFixed(2) : "—"}</b>
+              <b>{planeAxes.vertical} {cursorPoint ? cursorPoint.y.toFixed(2) : "—"}</b>
               <span>{planeAxes.normal} = 0.0 mm</span>
             </div>
             <div className="solver-footer">
@@ -6624,6 +7336,69 @@ function GeometryStage({
                 </select>
               </Field>
             </div>
+            {draft.sketch.profileMode === "centerlineThinWall" ? (
+              <details className="thinwall-offset-panel" open>
+                <summary className="thinwall-offset-summary">
+                  <div>
+                    <strong>中心线偏移</strong>
+                    <span>
+                      向两侧偏移生成薄壁轮廓；相连处延伸／裁切，自由端封口
+                    </span>
+                  </div>
+                  <ChevronDown size={15} />
+                </summary>
+                <div className="thinwall-offset-body">
+                  <p className="thinwall-offset-hint">
+                    将中心线向两侧偏移生成薄壁轮廓；相连处延伸／裁切并对齐封口后自动添加首尾重合约束，偏移边与原中心线自动平行。
+                  </p>
+                  <div className="form-grid two">
+                    <Field
+                      label="偏移距离 1"
+                      hint="中心线法向一侧（相对路径前进方向左侧）"
+                    >
+                      <NumberInput
+                        value={thinwallOffset.side1}
+                        step={0.01}
+                        min={0}
+                        onChange={(side1) =>
+                          setThinwallOffset((value) => ({ ...value, side1 }))
+                        }
+                      />
+                    </Field>
+                    <Field
+                      label="偏移距离 2"
+                      hint="中心线法向另一侧（相对路径前进方向右侧）"
+                    >
+                      <NumberInput
+                        value={thinwallOffset.side2}
+                        step={0.01}
+                        min={0}
+                        onChange={(side2) =>
+                          setThinwallOffset((value) => ({ ...value, side2 }))
+                        }
+                      />
+                    </Field>
+                  </div>
+                  <div className="thinwall-offset-actions">
+                    <button
+                      type="button"
+                      className="primary"
+                      disabled={solveCase !== "nominal"}
+                      onClick={applyThinwallOffset}
+                    >
+                      <MoveHorizontal size={14} />
+                      一键偏移
+                    </button>
+                    <small>
+                      可重复执行：会先清除旧薄壁轮廓再按当前距离重新生成。默认取壁厚参数的一半。
+                    </small>
+                  </div>
+                  {thinwallOffsetNote ? (
+                    <p className="thinwall-offset-note">{thinwallOffsetNote}</p>
+                  ) : null}
+                </div>
+              </details>
+            ) : null}
             {selected ? (
               <div className="selected-entity-editor">
                 <Field label="稳定 ID" hint="修改后会同步更新约束和区域引用">
@@ -6663,6 +7438,7 @@ function GeometryStage({
                     <Field label={`起点 ${planeAxes.horizontal}`}>
                       <NumberInput
                         value={selected.start[0]}
+                        step={0.01}
                         onChange={(value) =>
                           editEntity(draft.sketch.entities.indexOf(selected), {
                             start: [value, selected.start![1]],
@@ -6673,6 +7449,7 @@ function GeometryStage({
                     <Field label={`起点 ${planeAxes.vertical}`}>
                       <NumberInput
                         value={selected.start[1]}
+                        step={0.01}
                         onChange={(value) =>
                           editEntity(draft.sketch.entities.indexOf(selected), {
                             start: [selected.start![0], value],
@@ -6685,6 +7462,7 @@ function GeometryStage({
                         <Field label={`终点 ${planeAxes.horizontal}`}>
                           <NumberInput
                             value={selected.end[0]}
+                            step={0.01}
                             onChange={(value) =>
                               editEntity(
                                 draft.sketch.entities.indexOf(selected),
@@ -6696,6 +7474,7 @@ function GeometryStage({
                         <Field label={`终点 ${planeAxes.vertical}`}>
                           <NumberInput
                             value={selected.end[1]}
+                            step={0.01}
                             onChange={(value) =>
                               editEntity(
                                 draft.sketch.entities.indexOf(selected),
@@ -6720,7 +7499,7 @@ function GeometryStage({
                           value={
                             linePolar(selected.start, selected.end).length
                           }
-                          step={0.1}
+                          step={0.01}
                           min={0}
                           onChange={(length) => {
                             const polar = linePolar(
@@ -6752,7 +7531,7 @@ function GeometryStage({
                               .angleDegrees
                           }
                           unit="°"
-                          step={0.1}
+                          step={0.01}
                           onChange={(angleDegrees) => {
                             const polar = linePolar(
                               selected.start!,
@@ -6778,6 +7557,7 @@ function GeometryStage({
                     <Field label={`圆心 ${planeAxes.horizontal}`}>
                       <NumberInput
                         value={selected.center[0]}
+                        step={0.01}
                         onChange={(value) =>
                           editEntity(draft.sketch.entities.indexOf(selected), {
                             center: [value, selected.center![1]],
@@ -6788,6 +7568,7 @@ function GeometryStage({
                     <Field label={`圆心 ${planeAxes.vertical}`}>
                       <NumberInput
                         value={selected.center[1]}
+                        step={0.01}
                         onChange={(value) =>
                           editEntity(draft.sketch.entities.indexOf(selected), {
                             center: [selected.center![0], value],
@@ -6799,7 +7580,8 @@ function GeometryStage({
                       <Field label="半径">
                         <NumberInput
                           value={selected.radius}
-                          min={0.001}
+                          step={0.01}
+                          min={0.01}
                           onChange={(radius) =>
                             editEntity(draft.sketch.entities.indexOf(selected), {
                               radius,

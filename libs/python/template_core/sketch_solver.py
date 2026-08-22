@@ -383,7 +383,8 @@ def _case(draft: TemplateDraft, case: str, overrides: dict[str, float] | None) -
         primitives.append(item)
 
     region_results: list[dict[str, Any]] = []
-    if draft.sketch.profileMode == "centerlineThinWall":
+    use_centerline_path = draft.sketch.profileMode == "centerlineThinWall" and not draft.sketch.regions
+    if use_centerline_path:
         paths = [item for item in draft.sketch.entities if not item.construction and item.geometryType == "line"]
         thickness = float(parameters.get("thickness", 0))
         continuous = bool(paths)
@@ -409,7 +410,7 @@ def _case(draft: TemplateDraft, case: str, overrides: dict[str, float] | None) -
             "closed": continuous and not unsupported and thickness > TOLERANCE,
             "area": length * thickness,
         })
-    for region in ([] if draft.sketch.profileMode == "centerlineThinWall" else draft.sketch.regions):
+    for region in ([] if use_centerline_path else draft.sketch.regions):
         loop = [slices[reference] for reference in region.boundaryRefs if reference in slices and not slices[reference].entity.construction]
         geometries = [_geometry(state, item) for item in loop]
         closed = bool(loop) and region.closed
