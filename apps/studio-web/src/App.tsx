@@ -5,10 +5,7 @@
  * 后续如果要拆前端，优先从这个文件拆出各个 Stage 组件。
  */
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useLoader } from "@react-three/fiber";
-import { Bounds, Center, Grid, OrbitControls } from "@react-three/drei";
-import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ArrowRight,
@@ -51,7 +48,11 @@ import {
   Variable,
   X,
 } from "lucide-react";
-import { ApiError, api } from "./api";
+import { api } from "./api";
+import { CadViewer } from "./components/review/CadViewer";
+import { Toast } from "./components/ui/Toast";
+import { useDraftWorkspace } from "./features/draft/useDraftWorkspace";
+import { STAGES } from "./features/workflow/stageConfig";
 import type {
   CompileResult,
   Draft,
@@ -72,63 +73,6 @@ import type {
   VariantDefinition,
 } from "./types";
 
-const STAGES: {
-  id: StageName;
-  number: string;
-  title: string;
-  caption: string;
-  icon: typeof Box;
-}[] = [
-  {
-    id: "templateInfo",
-    number: "01",
-    title: "定义",
-    caption: "需求与证据",
-    icon: ClipboardCheck,
-  },
-  {
-    id: "material",
-    number: "02",
-    title: "材料",
-    caption: "适用范围、毛坯与验证",
-    icon: Layers3,
-  },
-  {
-    id: "baseSketch",
-    number: "03",
-    title: "几何",
-    caption: "配方与基准",
-    icon: Box,
-  },
-  {
-    id: "features",
-    number: "04",
-    title: "规则",
-    caption: "制造特征生成",
-    icon: GitBranch,
-  },
-  {
-    id: "variants",
-    number: "05",
-    title: "契约",
-    caption: "参数、接口与变体",
-    icon: Variable,
-  },
-  {
-    id: "review",
-    number: "06",
-    title: "验证",
-    caption: "求值与 B-Rep",
-    icon: Beaker,
-  },
-  {
-    id: "admission",
-    number: "07",
-    title: "发布",
-    caption: "准入与版本",
-    icon: PackageCheck,
-  },
-];
 
 const SOURCE_LABELS: Record<ParameterSource["type"], string> = {
   userInput: "实例输入",
@@ -154,30 +98,6 @@ const OPERATORS = [
   ["sheet.bend", "钣金单折弯", "available"],
   ["solid.import", "外部模型派生", "planned"],
 ] as const;
-
-type ErrorNotice = {
-  code: string;
-  message: string;
-  action?: string | null;
-  fields: { path?: string; message: string; type?: string }[];
-  traceId?: string;
-};
-
-const toErrorNotice = (error: unknown): ErrorNotice => {
-  if (error instanceof ApiError) {
-    return {
-      code: error.code,
-      message: error.message,
-      action: error.action,
-      fields: error.fields,
-      traceId: error.traceId,
-    };
-  }
-  if (error instanceof Error) {
-    return { code: "CLIENT_ERROR", message: error.message, fields: [] };
-  }
-  return { code: "CLIENT_ERROR", message: String(error), fields: [] };
-};
 
 const operatorStatus = (operator: string) =>
   OPERATORS.find(([id]) => id === operator)?.[2] || "unknown";
@@ -416,65 +336,6 @@ function profileModeSketch(
     ],
     constraintsReviewed: false,
   };
-}
-
-function Model({ url }: { url: string }) {
-  const geometry = useLoader(STLLoader, url);
-  return (
-    <Center>
-      <mesh geometry={geometry} castShadow receiveShadow>
-        <meshStandardMaterial
-          color="#e99a35"
-          roughness={0.34}
-          metalness={0.4}
-        />
-      </mesh>
-    </Center>
-  );
-}
-
-// 显示 CAD Worker 输出的 STL 预览；没有编译结果时显示空状态。
-function CadViewer({ result }: { result: CompileResult | null }) {
-  const stl = result?.artifacts.find((item) => item.kind === "stl");
-  if (!stl)
-    return (
-      <div className="viewer-empty">
-        <Box size={38} />
-        <strong>等待生成三维模型</strong>
-        <span>先保存模板并完成参数求值，再运行 B-Rep 编译</span>
-      </div>
-    );
-  return (
-    <div className="cad-viewer">
-      <Canvas camera={{ position: [160, 140, 220], fov: 42 }} shadows>
-        <color attach="background" args={["#f5f6f7"]} />
-        <ambientLight intensity={1.7} />
-        <directionalLight
-          position={[100, 160, 180]}
-          intensity={2.7}
-          castShadow
-        />
-        <Suspense fallback={null}>
-          <Bounds fit clip observe margin={1.25}>
-            <Model url={stl.url} />
-          </Bounds>
-        </Suspense>
-        <Grid
-          position={[0, -60, 0]}
-          args={[600, 600]}
-          cellSize={20}
-          cellThickness={0.55}
-          cellColor="#d4d9de"
-          sectionSize={100}
-          sectionColor="#aeb7c0"
-          fadeDistance={700}
-          infiniteGrid
-        />
-        <OrbitControls makeDefault />
-      </Canvas>
-      <span className="viewer-hint">拖拽旋转 · 滚轮缩放 · 右键平移</span>
-    </div>
-  );
 }
 
 type SketchTool = "select" | "point" | "line" | "rectangle" | "circle" | "arc";
@@ -2933,270 +2794,39 @@ function SketchIntentEditor({
 
 // 应用主组件：管理当前草稿、阶段、材料列表、编译结果和全局提示。
 export default function App() {
-  const initialized = useRef(false);
-  const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [stage, setStage] = useState<StageName>("templateInfo");
-  const [validation, setValidation] = useState<StageValidation | null>(null);
-  const [compile, setCompile] = useState<CompileResult | null>(null);
-  const [versions, setVersions] = useState<PublishedVersion[]>([]);
-  const [materials, setMaterials] = useState<Material[]>([]);
-  const [registry, setRegistry] = useState<TemplateAuthoringRegistry | null>(
-    null,
-  );
-  const [materialSearch, setMaterialSearch] = useState("");
-  const [dirty, setDirty] = useState(false);
-  const [busy, setBusy] = useState("");
-  const [notice, setNotice] = useState("");
-  const [error, setError] = useState<ErrorNotice | null>(null);
-  useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    void loadDrafts();
-    void api.templateAuthoringRegistry().then(setRegistry).catch(showError);
-  }, []);
-  useEffect(() => {
-    if (!draft?.id) return;
-    setValidation(null);
-    if (stage === "material")
-      void api
-        .materials(materialSearch, draft.id)
-        .then(setMaterials)
-        .catch(showError);
-    if (stage === "review")
-      void api.latestCompile(draft.id).then(setCompile).catch(showError);
-    if (stage === "admission")
-      void api.versions(draft.id).then(setVersions).catch(showError);
-  }, [stage, draft?.id]);
-  useEffect(() => {
-    if (stage !== "material" || !draft?.materialRequirements[0]) return;
-    const timer = setTimeout(
-      () =>
-        void api
-          .searchMaterials(materialSearch, draft.materialRequirements[0])
-          .then(setMaterials)
-          .catch(showError),
-      250,
-    );
-    return () => clearTimeout(timer);
-  }, [stage, materialSearch, draft?.materialRequirements]);
-
-  async function loadDrafts(selectId?: string) {
-    try {
-      const rows = await api.drafts();
-      setDrafts(rows);
-      const selected =
-        rows.find((x) => x.id === selectId) ||
-        rows[0] ||
-        (await api.createBlank("Ω型立柱模板"));
-      if (!rows.length) setDrafts([selected]);
-      chooseDraft(selected);
-    } catch (e) {
-      showError(e);
-    }
-  }
-  function chooseDraft(item: Draft) {
-    setDraft(structuredClone(item));
-    setDirty(false);
-    setValidation(null);
-    setCompile(null);
-    setVersions([]);
-    const next = STAGES.find((s) => item.stageStatus[s.id] !== "complete");
-    setStage(next?.id || "variants");
-    if (item.id) {
-      void api.latestCompile(item.id).then(setCompile).catch(showError);
-      void api.versions(item.id).then(setVersions).catch(showError);
-    }
-  }
-  function showError(e: unknown) {
-    setError(toErrorNotice(e));
-    setTimeout(() => setError(null), 9000);
-  }
-  function change(next: Draft) {
-    setDraft(next);
-    setDirty(true);
-    setValidation(null);
-  }
-  function update<K extends keyof Draft>(key: K, value: Draft[K]) {
-    if (draft) change({ ...draft, [key]: value });
-  }
-  async function save(current = draft) {
-    if (!current?.id) return current;
-    setBusy("save");
-    try {
-      const saved = await api.saveDraft(current);
-      setDraft(saved);
-      setDrafts((x) => x.map((d) => (d.id === saved.id ? saved : d)));
-      setDirty(false);
-      setNotice("已保存为新修订");
-      setTimeout(() => setNotice(""), 2400);
-      return saved;
-    } catch (e) {
-      showError(e);
-      return null;
-    } finally {
-      setBusy("");
-    }
-  }
-  async function check() {
-    if (!draft?.id) return;
-    const saved = dirty ? await save() : draft;
-    if (!saved?.id) return;
-    setBusy("check");
-    try {
-      setValidation(await api.validateStage(saved.id, stage));
-    } catch (e) {
-      showError(e);
-    } finally {
-      setBusy("");
-    }
-  }
-  async function completeStage() {
-    if (!draft?.id) return;
-    const saved = dirty ? await save() : draft;
-    if (!saved?.id) return;
-    setBusy("complete");
-    try {
-      const result = await api.completeStage(saved.id, stage);
-      setDraft(result.draft);
-      setDrafts((x) =>
-        x.map((d) => (d.id === result.draft.id ? result.draft : d)),
-      );
-      setValidation(result.validation);
-      if (result.validation.complete) {
-        const i = STAGES.findIndex((s) => s.id === stage);
-        if (i < 6) setStage(STAGES[i + 1].id);
-        setNotice("阶段检查通过");
-        setTimeout(() => setNotice(""), 2600);
-      }
-    } catch (e) {
-      showError(e);
-    } finally {
-      setBusy("");
-    }
-  }
-  async function createDraft() {
-    setBusy("create");
-    try {
-      const d = await api.createBlank();
-      setDrafts((x) => [d, ...x]);
-      chooseDraft(d);
-    } catch (e) {
-      showError(e);
-    } finally {
-      setBusy("");
-    }
-  }
-  async function duplicate() {
-    if (!draft?.id) return;
-    try {
-      const d = await api.duplicateDraft(draft.id);
-      setDrafts((x) => [d, ...x]);
-      chooseDraft(d);
-    } catch (e) {
-      showError(e);
-    }
-  }
-  async function archive() {
-    if (!draft?.id || !confirm(`归档“${draft.name}”？`)) return;
-    try {
-      await api.archiveDraft(draft.id);
-      await loadDrafts();
-    } catch (e) {
-      showError(e);
-    }
-  }
-  async function bindMaterial(
-    material: Material,
-    mode: "reference" | "copy",
-    role: MaterialValidationSample["role"] = "nominal",
-  ) {
-    if (!draft) return;
-    setBusy(`mat-${material.id}`);
-    try {
-      const binding = await api.bindMaterial(material.id, mode);
-      const sample: MaterialValidationSample = {
-        id: `material.${role}`,
-        role,
-        name: {
-          minimum: "最小边界",
-          nominal: "标称样例",
-          maximum: "最大边界",
-          special: "特殊工况",
-        }[role],
-        bindingId: binding.id,
-        bindingMode: mode,
-        materialCode: material.code,
-        materialName: material.name,
-        materialThickness: material.thickness,
-        variantId:
-          role === "minimum"
-            ? "minimum"
-            : role === "maximum"
-              ? "maximum"
-              : "nominal",
-        requiredForAdmission: role === "nominal",
-        reviewed: !!material.requirementMatch?.compatible,
-      };
-      const samples = [
-        ...draft.materialValidationSamples.filter((item) => item.role !== role),
-        sample,
-      ];
-      const requirements = draft.materialRequirements.map((r, i) =>
-        i
-          ? r
-          : r.selectionMode === "specificRecord"
-            ? { ...r, specificBindingId: binding.id, reviewed: true }
-            : r,
-      );
-      change({
-        ...draft,
-        materialValidationSamples: samples,
-        materialRequirements: requirements,
-      });
-      setNotice(`${material.code} 已加入${sample.name}`);
-    } catch (e) {
-      showError(e);
-    } finally {
-      setBusy("");
-    }
-  }
-  async function runCompile() {
-    if (!draft?.id) return;
-    const saved = dirty ? await save() : draft;
-    if (!saved?.id) return;
-    setBusy("compile");
-    try {
-      const result = await api.compile(saved.id);
-      setCompile(result);
-      setValidation(await api.validateStage(saved.id, "review"));
-      if (!result.success)
-        showError(result.diagnostics.map((x) => x.message).join("；"));
-    } catch (e) {
-      showError(e);
-    } finally {
-      setBusy("");
-    }
-  }
-  async function publish() {
-    if (!draft?.id) return;
-    const saved = dirty ? await save() : draft;
-    if (!saved?.id) return;
-    setBusy("publish");
-    try {
-      const result = await api.publish(saved.id);
-      setDraft(result.draft);
-      setDrafts((x) =>
-        x.map((d) => (d.id === result.draft.id ? result.draft : d)),
-      );
-      setVersions(await api.versions(saved.id));
-      setNotice(`V${result.version.version} 已发布并冻结`);
-    } catch (e) {
-      showError(e);
-    } finally {
-      setBusy("");
-    }
-  }
+  const {
+    drafts,
+    draft,
+    stage,
+    validation,
+    compile,
+    versions,
+    materials,
+    registry,
+    materialSearch,
+    dirty,
+    busy,
+    notice,
+    error,
+    setStage,
+    setMaterials,
+    setMaterialSearch,
+    setError,
+    setNotice,
+    chooseDraft,
+    change,
+    update,
+    save,
+    check,
+    completeStage,
+    createDraft,
+    duplicate,
+    archive,
+    bindMaterial,
+    runCompile,
+    publish,
+    showError,
+  } = useDraftWorkspace();
   if (!draft)
     return (
       <div className="loading-screen">
@@ -3441,40 +3071,14 @@ export default function App() {
           </aside>
         </div>
       </main>
-      {(notice || error) && (
-        <div className={`toast ${error ? "error" : ""}`}>
-          {error ? (
-            <div className="toast-content">
-              <strong>
-                <code>{error.code}</code>
-                {error.message}
-              </strong>
-              {error.action && <span>{error.action}</span>}
-              {error.fields.length > 0 && (
-                <ul>
-                  {error.fields.slice(0, 3).map((field, index) => (
-                    <li key={`${field.path || "field"}-${index}`}>
-                      {field.path && <code>{field.path}</code>}
-                      {field.message}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {error.traceId && <small>追踪号：{error.traceId}</small>}
-            </div>
-          ) : (
-            notice
-          )}
-          <button
-            onClick={() => {
-              setError(null);
-              setNotice("");
-            }}
-          >
-            <X size={15} />
-          </button>
-        </div>
-      )}
+      <Toast
+        notice={notice}
+        error={error}
+        onClose={() => {
+          setError(null);
+          setNotice("");
+        }}
+      />
     </div>
   );
 }
